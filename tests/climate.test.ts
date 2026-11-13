@@ -226,3 +226,4 @@ describe("Climate Calculations", () => {
     expect(indicators.rainfallVariabilityCvPercent).toBe(0); // identical both years
   });
 });
+

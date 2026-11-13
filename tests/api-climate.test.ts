@@ -60,3 +60,4 @@ describe("GET /api/climate API Route", () => {
     expect(json.meta.dataSource).toContain("Mock Fixture");
   });
 });
+

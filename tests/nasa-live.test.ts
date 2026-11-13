@@ -23,3 +23,4 @@ describe("Live NASA POWER Integration", () => {
     expect(processed.quality.totalReceivedDays).toBeGreaterThan(700);
   }, 30000);
 });
+

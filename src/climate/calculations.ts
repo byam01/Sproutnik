@@ -203,3 +203,4 @@ export function calculateDrySeasonDeficitFrequency(
   const deficitCount = totals.filter((t) => t < deficitThreshold).length;
   return Number(((deficitCount / totals.length) * 100).toFixed(1));
 }
+

@@ -121,3 +121,4 @@ export function generateMockDailyRecords(startYear: number, endYear: number): Da
   }
   return records;
 }
+
