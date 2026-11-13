@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useClimateData } from "@/hooks/useClimateData";
+import { useCropRotations } from "@/hooks/useCropRotations";
 import { Sidebar } from "./Sidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { ClimateMetricCard } from "./ClimateMetricCard";
@@ -31,6 +32,11 @@ export function DashboardView() {
     refetch,
     coordinates,
   } = useClimateData(false);
+
+  const { data: rotationsData, loading: rotationsLoading } = useCropRotations(
+    coordinates,
+    isMock
+  );
 
   const [activeSection, setActiveSection] = useState("overview");
 
@@ -232,7 +238,7 @@ export function DashboardView() {
 
             {/* 3. Crop Rotations Section */}
             <section className="scroll-mt-6">
-              <RotationOverview />
+              <RotationOverview rotationsData={rotationsData} loading={rotationsLoading} />
             </section>
 
             {/* 4. Data Sources & Transparency Section */}
