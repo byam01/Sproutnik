@@ -80,14 +80,14 @@ describe("ProfileField Status Preservation & Provenance", () => {
     it("preserves all 4 field statuses across JSON serialization round-trips", () => {
       interface DraftProfile {
         soilTexture: ProfileField<string>;
-        landAreaAcres: ProfileField<number>;
+        landAreaHectares: ProfileField<number>;
         irrigationSource: ProfileField<string>;
         groundwaterDepthMeters: ProfileField<number>;
       }
 
       const draft: DraftProfile = {
         soilTexture: createKnownField("clay_loam", "user"),
-        landAreaAcres: createSkippedField(),
+        landAreaHectares: createSkippedField(),
         irrigationSource: createUnknownField(),
         groundwaterDepthMeters: createNotProvidedField(),
       };
@@ -101,7 +101,7 @@ describe("ProfileField Status Preservation & Provenance", () => {
         expect(deserialized.soilTexture.source).toBe("user");
       }
 
-      expect(deserialized.landAreaAcres.status).toBe("skipped");
+      expect(deserialized.landAreaHectares.status).toBe("skipped");
       expect(deserialized.irrigationSource.status).toBe("unknown");
       expect(deserialized.groundwaterDepthMeters.status).toBe("not_provided");
     });
@@ -125,6 +125,36 @@ describe("ProfileField Status Preservation & Provenance", () => {
 
       expect(isNotProvidedField(notProvided)).toBe(true);
       expect(isNotProvidedField(known)).toBe(false);
+    });
+  });
+
+  describe("Canonical FarmerProfile Contract Conformance", () => {
+    it("constructs a valid canonical FarmerProfile with ProfileFields", () => {
+      const canonicalProfile = {
+        profileId: "profile_pau_demo_01",
+        location: createKnownField({
+          latitude: 30.9,
+          longitude: 75.85,
+          district: "Ludhiana",
+          countryCode: "IN",
+          selectionMethod: "gps" as const,
+        }),
+        landAreaHectares: createKnownField(2.5),
+        soilTexture: createKnownField("loam" as const),
+        irrigationAvailable: createKnownField(true),
+        irrigationSource: createKnownField("tubewell_deep" as const),
+        currentCrops: createKnownField(["paddy_transplanted", "bread_wheat"]),
+        farmingGoals: createKnownField(["reduce_water_usage" as const, "improve_soil_health" as const]),
+        createdAt: "2026-11-14T12:00:00.000Z",
+        updatedAt: "2026-11-14T12:00:00.000Z",
+      };
+
+      expect(canonicalProfile.profileId).toBe("profile_pau_demo_01");
+      expect(canonicalProfile.landAreaHectares.status).toBe("known");
+      expect(isKnownField(canonicalProfile.landAreaHectares)).toBe(true);
+      if (isKnownField(canonicalProfile.farmingGoals)) {
+        expect(canonicalProfile.farmingGoals.value).toContain("reduce_water_usage");
+      }
     });
   });
 });

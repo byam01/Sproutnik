@@ -6,6 +6,9 @@
  * for Ludhiana district, Punjab, India.
  */
 
+import { ProfileField } from "./onboarding";
+export * from "./onboarding";
+
 // ==========================================
 // 1. Geographic & Location Contracts
 // ==========================================
@@ -223,14 +226,45 @@ export type SoilTextureType = "clay_loam" | "sandy_loam" | "loam" | "silt_loam" 
 
 export type IrrigationSourceType = "tubewell_deep" | "tubewell_shallow" | "canal" | "rainfed_only" | "conjunctive";
 
+export interface ProfileLocation {
+  latitude?: number;
+  longitude?: number;
+  village?: string;
+  district?: string;
+  state?: string;
+  countryCode: string;
+  selectionMethod: "gps" | "map" | "manual";
+}
+
+export const FARMING_GOALS = [
+  "improve_yield",
+  "reduce_water_usage",
+  "improve_soil_health",
+  "reduce_input_costs",
+  "diversify_crops",
+  "improve_income_stability",
+  "manage_climate_risk",
+] as const;
+
+export type FarmingGoal = (typeof FARMING_GOALS)[number];
+
+export interface RotationFarmerContext {
+  soilTexture?: SoilTextureType;
+  irrigationSource?: IrrigationSourceType;
+  groundwaterDepthMeters?: number;
+}
+
 export interface FarmerProfile {
-  location: Location;
-  landAreaAcres?: number;
-  soilTexture: SoilTextureType;
-  irrigationSource: IrrigationSourceType;
-  groundwaterDepthMeters?: number | null;
-  experienceWithDirectSeededRice?: boolean;
-  riskTolerance?: "conservative" | "moderate" | "experimental";
+  profileId: string;
+  location: ProfileField<ProfileLocation>;
+  landAreaHectares: ProfileField<number>;
+  soilTexture: ProfileField<SoilTextureType>;
+  irrigationAvailable: ProfileField<boolean>;
+  irrigationSource: ProfileField<IrrigationSourceType>;
+  currentCrops: ProfileField<string[]>;
+  farmingGoals: ProfileField<FarmingGoal[]>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ==========================================

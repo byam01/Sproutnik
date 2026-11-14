@@ -7,10 +7,13 @@ import { compareCropRotation } from "@/engine/comparison";
 import {
   ApiResponse,
   ClimateIndicators,
+  createKnownField,
+  createUnknownField,
   FarmerProfile,
   IrrigationSourceType,
   Location,
   RotationComparisonResult,
+  RotationFarmerContext,
   SoilTextureType,
 } from "@/types";
 
@@ -105,11 +108,30 @@ export async function GET(
         : `Point (${lat.toFixed(2)}, ${lon.toFixed(2)})`,
   };
 
-  const farmerProfile: FarmerProfile = {
-    location,
+  const farmerContext: RotationFarmerContext = {
     soilTexture: soilTexture || "loam",
     irrigationSource,
-    groundwaterDepthMeters,
+    groundwaterDepthMeters: groundwaterDepthMeters ?? undefined,
+  };
+
+  const now = new Date().toISOString();
+  const farmerProfile: FarmerProfile = {
+    profileId: "profile_session_context",
+    location: createKnownField({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      district: location.district || "Ludhiana",
+      countryCode: "IN",
+      selectionMethod: "manual",
+    }),
+    landAreaHectares: createUnknownField(),
+    soilTexture: soilTexture ? createKnownField(soilTexture) : createUnknownField(),
+    irrigationAvailable: createKnownField(irrigationSource !== "rainfed_only"),
+    irrigationSource: createKnownField(irrigationSource),
+    currentCrops: createUnknownField(),
+    farmingGoals: createUnknownField(),
+    createdAt: now,
+    updatedAt: now,
   };
 
   let climate: ClimateIndicators;
@@ -152,7 +174,7 @@ export async function GET(
 
   // Run Stage A & Stage B evaluation for all candidate rotations
   const evaluatedRotations = CANDIDATE_ROTATIONS.map((rotation) =>
-    compareCropRotation(rotation, climate, farmerProfile)
+    compareCropRotation(rotation, climate, farmerContext)
   );
 
   const baseline =

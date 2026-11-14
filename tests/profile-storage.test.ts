@@ -9,7 +9,7 @@ import {
   LEGACY_PROFILE_STORAGE_KEY,
   StoredProfileEnvelope,
 } from "../src/services/profileStorage";
-import { FarmerProfile } from "../src/types";
+import { createKnownField, FarmerProfile } from "../src/types";
 
 // Mock localStorage in Vitest Node environment
 class MockLocalStorage {
@@ -36,12 +36,22 @@ describe("Farmer Profile Client Storage Infrastructure", () => {
   let mockStorage: MockLocalStorage;
 
   const validProfile: FarmerProfile = {
-    location: { latitude: 30.9, longitude: 75.85, name: "Ludhiana" },
-    landAreaAcres: 5,
-    soilTexture: "loam",
-    irrigationSource: "tubewell_deep",
-    groundwaterDepthMeters: 28.5,
-    riskTolerance: "conservative",
+    profileId: "profile_ludhiana_001",
+    location: createKnownField({
+      latitude: 30.9,
+      longitude: 75.85,
+      district: "Ludhiana",
+      countryCode: "IN",
+      selectionMethod: "gps",
+    }),
+    landAreaHectares: createKnownField(2.0234),
+    soilTexture: createKnownField("loam"),
+    irrigationAvailable: createKnownField(true),
+    irrigationSource: createKnownField("tubewell_deep"),
+    currentCrops: createKnownField(["paddy_transplanted", "bread_wheat"]),
+    farmingGoals: createKnownField(["reduce_water_usage", "improve_soil_health"]),
+    createdAt: "2026-11-14T10:00:00.000Z",
+    updatedAt: "2026-11-14T10:00:00.000Z",
   };
 
   const validEnvelope: StoredProfileEnvelope = {
@@ -95,8 +105,14 @@ describe("Farmer Profile Client Storage Infrastructure", () => {
       if (readResult.success) {
         expect(readResult.envelope.schemaVersion).toBe(1);
         expect(readResult.envelope.profileId).toBe("profile_ludhiana_001");
-        expect(readResult.envelope.profile.soilTexture).toBe("loam");
-        expect(readResult.envelope.profile.landAreaAcres).toBe(5);
+        expect(readResult.envelope.profile.soilTexture.status).toBe("known");
+        if (readResult.envelope.profile.soilTexture.status === "known") {
+          expect(readResult.envelope.profile.soilTexture.value).toBe("loam");
+        }
+        expect(readResult.envelope.profile.landAreaHectares.status).toBe("known");
+        if (readResult.envelope.profile.landAreaHectares.status === "known") {
+          expect(readResult.envelope.profile.landAreaHectares.value).toBe(2.0234);
+        }
       }
     });
 

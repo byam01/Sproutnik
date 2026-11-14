@@ -2,15 +2,14 @@ import { describe, expect, it } from "vitest";
 import { compareCropRotation } from "../src/engine/comparison";
 import { CANDIDATE_ROTATIONS } from "../src/agronomy/rotations";
 import { MOCK_CLIMATE_INDICATORS_LUDHIANA } from "../src/fixtures/climate.mock";
-import { FarmerProfile } from "../src/types";
+import { RotationFarmerContext } from "../src/types";
 
 describe("Stage B: Trade-Off Comparison Engine", () => {
   const riceWheat = CANDIDATE_ROTATIONS.find((r) => r.id === "rotation_rice_wheat")!;
   const maizeWheat = CANDIDATE_ROTATIONS.find((r) => r.id === "rotation_maize_wheat")!;
   const maizeMustardMoong = CANDIDATE_ROTATIONS.find((r) => r.id === "rotation_maize_mustard_moong")!;
 
-  const profile: FarmerProfile = {
-    location: { latitude: 30.9, longitude: 75.85 },
+  const profile: RotationFarmerContext = {
     soilTexture: "loam",
     irrigationSource: "tubewell_deep",
   };

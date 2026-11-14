@@ -1,9 +1,9 @@
 import {
   AssessmentTradeoff,
   ClimateIndicators,
-  FarmerProfile,
   RotationComparisonResult,
   RotationDefinition,
+  RotationFarmerContext,
   WaterDemandCategory,
 } from "@/types";
 import { evaluateRotationFeasibility } from "./feasibility";
@@ -23,9 +23,9 @@ import { evaluateRotationFeasibility } from "./feasibility";
 export function compareCropRotation(
   rotation: RotationDefinition,
   climate: ClimateIndicators,
-  farmerProfile?: FarmerProfile
+  farmerContext?: RotationFarmerContext
 ): RotationComparisonResult {
-  const feasibility = evaluateRotationFeasibility(rotation, farmerProfile);
+  const feasibility = evaluateRotationFeasibility(rotation, farmerContext);
   const isBaseline = rotation.id === "rotation_rice_wheat";
 
   // Calculate total water demand and deficit against historical rainfall

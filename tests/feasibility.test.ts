@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { evaluateRotationFeasibility } from "../src/engine/feasibility";
 import { CANDIDATE_ROTATIONS } from "../src/agronomy/rotations";
 import { CROPS_PUNJAB } from "../src/agronomy/crops";
-import { FarmerProfile, RotationDefinition } from "../src/types";
+import { RotationDefinition, RotationFarmerContext } from "../src/types";
 
 describe("Stage A: Rotation Feasibility Engine", () => {
   const riceWheat = CANDIDATE_ROTATIONS.find((r) => r.id === "rotation_rice_wheat")!;
@@ -10,8 +10,7 @@ describe("Stage A: Rotation Feasibility Engine", () => {
   const maizeWheat = CANDIDATE_ROTATIONS.find((r) => r.id === "rotation_maize_wheat")!;
 
   it("evaluates baseline rice-wheat as feasible with adequate tubewell irrigation", () => {
-    const profile: FarmerProfile = {
-      location: { latitude: 30.9, longitude: 75.85 },
+    const profile: RotationFarmerContext = {
       irrigationSource: "tubewell_deep",
       soilTexture: "clay_loam",
     };
@@ -23,8 +22,7 @@ describe("Stage A: Rotation Feasibility Engine", () => {
   });
 
   it("rejects puddled rice rotation under rainfed-only irrigation profile", () => {
-    const rainfedProfile: FarmerProfile = {
-      location: { latitude: 30.9, longitude: 75.85 },
+    const rainfedProfile: RotationFarmerContext = {
       irrigationSource: "rainfed_only",
       soilTexture: "loam",
     };
@@ -35,8 +33,7 @@ describe("Stage A: Rotation Feasibility Engine", () => {
   });
 
   it("rejects Direct-Seeded Rice (DSR) on sandy soil according to PAU guidelines", () => {
-    const sandyProfile: FarmerProfile = {
-      location: { latitude: 30.9, longitude: 75.85 },
+    const sandyProfile: RotationFarmerContext = {
       irrigationSource: "tubewell_deep",
       soilTexture: "sandy",
     };

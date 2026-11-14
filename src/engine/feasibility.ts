@@ -1,7 +1,7 @@
 import {
-  FarmerProfile,
   FeasibilityCheckCriterion,
   RotationDefinition,
+  RotationFarmerContext,
   RotationFeasibilityResult,
 } from "@/types";
 
@@ -19,7 +19,7 @@ export const TIGHT_TURNAROUND_DAYS_WARNING = 15;
  */
 export function evaluateRotationFeasibility(
   rotation: RotationDefinition,
-  farmerProfile?: FarmerProfile
+  farmerContext?: RotationFarmerContext
 ): RotationFeasibilityResult {
   const criteria: FeasibilityCheckCriterion[] = [];
   const rejectionReasons: string[] = [];
@@ -69,15 +69,15 @@ export function evaluateRotationFeasibility(
     0
   );
 
-  if (farmerProfile?.irrigationSource === "rainfed_only") {
+  if (farmerContext?.irrigationSource === "rainfed_only") {
     if (hasPuddleRice || totalEstimatedWaterMm > 800) {
       irrigationPassed = false;
       const reason = `Rotation requires estimated ~${totalEstimatedWaterMm} mm irrigation, which cannot be sustained under rainfed-only conditions in Punjab (historical mean annual rain is ~680 mm).`;
       rejectionReasons.push(reason);
       irrigationExplanation = reason;
     }
-  } else if (farmerProfile?.irrigationSource === "tubewell_shallow") {
-    if (hasPuddleRice && (farmerProfile.groundwaterDepthMeters ?? 0) > 20) {
+  } else if (farmerContext?.irrigationSource === "tubewell_shallow") {
+    if (hasPuddleRice && (farmerContext.groundwaterDepthMeters ?? 0) > 20) {
       warnings.push(
         "Shallow tubewells risk discharge failure during peak June–July paddy transplantation when local water table drops below centrifugal suction limits."
       );
@@ -96,8 +96,8 @@ export function evaluateRotationFeasibility(
   let soilPassed = true;
   let soilExplanation = "Soil texture matches agronomic requirements for all crops in sequence.";
 
-  if (farmerProfile?.soilTexture) {
-    const soil = farmerProfile.soilTexture;
+  if (farmerContext?.soilTexture) {
+    const soil = farmerContext.soilTexture;
 
     // Direct Seeded Rice (DSR) is not recommended on sandy soils by PAU
     const hasDsr = rotation.crops.some((c) => c.id === "paddy_dsr");
