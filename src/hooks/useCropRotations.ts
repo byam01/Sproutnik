@@ -11,9 +11,16 @@ export interface UseCropRotationsResult {
   refetch: () => void;
 }
 
+export interface FarmerRotationContext {
+  soilTexture?: string;
+  irrigationSource?: string;
+  groundwaterDepth?: number;
+}
+
 export function useCropRotations(
   coordinates: { lat: number; lon: number } = { lat: 30.9, lon: 75.85 },
-  isMock = false
+  isMock = false,
+  farmerContext?: FarmerRotationContext
 ): UseCropRotationsResult {
   const [data, setData] = useState<RotationsApiResponseData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,6 +35,9 @@ export function useCropRotations(
       lon: coordinates.lon,
       startYear: 2015,
       endYear: 2024,
+      soilTexture: farmerContext?.soilTexture,
+      irrigationSource: farmerContext?.irrigationSource,
+      groundwaterDepth: farmerContext?.groundwaterDepth,
       mock: isMock,
     };
 
@@ -42,7 +52,14 @@ export function useCropRotations(
     }
 
     setLoading(false);
-  }, [coordinates.lat, coordinates.lon, isMock]);
+  }, [
+    coordinates.lat,
+    coordinates.lon,
+    isMock,
+    farmerContext?.soilTexture,
+    farmerContext?.irrigationSource,
+    farmerContext?.groundwaterDepth,
+  ]);
 
   useEffect(() => {
     loadRotations();

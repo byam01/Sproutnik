@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useClimateData } from "@/hooks/useClimateData";
 import { useCropRotations } from "@/hooks/useCropRotations";
+import { loadStoredProfile } from "@/services/profileStorage";
+import { FarmerProfile, isKnownField } from "@/types";
+import { FarmerProfileBanner } from "./FarmerProfileBanner";
 import { Sidebar } from "./Sidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { ClimateMetricCard } from "./ClimateMetricCard";
@@ -22,6 +25,44 @@ import {
 } from "./icons";
 
 export function DashboardView() {
+  const [storedProfile, setStoredProfile] = useState<FarmerProfile | null>(null);
+  const [storedProfileId, setStoredProfileId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const envelope = loadStoredProfile();
+    if (envelope && envelope.profile) {
+      setStoredProfile(envelope.profile);
+      setStoredProfileId(envelope.profileId);
+    }
+  }, []);
+
+  const customCoordinates = useMemo(() => {
+    if (storedProfile && isKnownField(storedProfile.location)) {
+      const loc = storedProfile.location.value;
+      if (
+        typeof loc.latitude === "number" &&
+        typeof loc.longitude === "number" &&
+        !isNaN(loc.latitude) &&
+        !isNaN(loc.longitude)
+      ) {
+        return { lat: loc.latitude, lon: loc.longitude };
+      }
+    }
+    return undefined;
+  }, [storedProfile]);
+
+  const farmerContext = useMemo(() => {
+    if (!storedProfile) return undefined;
+    return {
+      soilTexture: isKnownField(storedProfile.soilTexture)
+        ? storedProfile.soilTexture.value
+        : undefined,
+      irrigationSource: isKnownField(storedProfile.irrigationSource)
+        ? storedProfile.irrigationSource.value
+        : undefined,
+    };
+  }, [storedProfile]);
+
   const {
     data,
     meta,
@@ -31,11 +72,12 @@ export function DashboardView() {
     setIsMock,
     refetch,
     coordinates,
-  } = useClimateData(false);
+  } = useClimateData(false, customCoordinates);
 
   const { data: rotationsData, loading: rotationsLoading } = useCropRotations(
     coordinates,
-    isMock
+    isMock,
+    farmerContext
   );
 
   const [activeSection, setActiveSection] = useState("overview");
@@ -76,9 +118,18 @@ export function DashboardView() {
               : "2015 – 2024"
           }
           locationName={
-            data?.location.name || "Ludhiana Demonstration Region, Punjab"
+            data?.location.name ||
+            (storedProfile && isKnownField(storedProfile.location) && storedProfile.location.value.district
+              ? `${storedProfile.location.value.district}, Punjab, India`
+              : "Ludhiana Demonstration Region, Punjab")
           }
           coordsText={`${coordinates.lat.toFixed(2)}° N, ${coordinates.lon.toFixed(2)}° E`}
+        />
+
+        {/* Personalized Farmer Profile Banner */}
+        <FarmerProfileBanner
+          profile={storedProfile}
+          profileId={storedProfileId ?? undefined}
         />
 
         {/* Loading State */}
