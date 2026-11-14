@@ -13,6 +13,18 @@ import {
   convertToAcres,
 } from "@/types/onboarding";
 import {
+  isRotationSupportedCropId,
+  getCropDisplayName,
+  getCropDisplay,
+} from "@/utils/cropCatalogAdapter";
+import {
+  getApprovedFarmingGoalsList,
+  getLocalizedGoal,
+  canonicalizeFarmingGoal,
+} from "@/utils/farmingGoalsAdapter";
+import { fetchCropsApi } from "@/services/api";
+import { ProfileSyncStatus } from "./OnboardingHarness";
+import {
   SoilTextureType,
   IrrigationSourceType,
   Location,
@@ -40,6 +52,10 @@ interface OnboardingFieldGuideProps {
   onSwitchToConversation: () => void;
   onComplete: () => void;
   onExit: () => void;
+  locale?: "en" | "pa" | "hi";
+  syncStatus?: ProfileSyncStatus;
+  syncErrorMessage?: string | null;
+  onProceedOffline?: () => void;
 }
 
 export function OnboardingFieldGuide({
@@ -48,10 +64,48 @@ export function OnboardingFieldGuide({
   onSwitchToConversation,
   onComplete,
   onExit,
+  locale = "en",
+  syncStatus = "idle",
+  syncErrorMessage,
+  onProceedOffline,
 }: OnboardingFieldGuideProps) {
   const currentStep = state.currentStepIndex;
   const totalSteps = FIELD_GUIDE_STEPS.length;
   const [cropSearch, setCropSearch] = useState("");
+  const [catalogCrops, setCatalogCrops] = useState<AvailableCrop[]>(PUNJAB_CROP_CATALOG);
+  const [catalogSource, setCatalogSource] = useState<"api" | "local">("local");
+
+  // Load authoritative crops from GET /api/crops with local adapter fallback
+  useEffect(() => {
+    let isMounted = true;
+    fetchCropsApi()
+      .then((res) => {
+        if (isMounted && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped: AvailableCrop[] = res.data.map((item) => {
+            const display = getCropDisplay(item.id);
+            return {
+              id: item.id,
+              name: item.name,
+              localName: display.localizedNamePunjabi ?? item.name,
+              scientificName: (item as any).scientificName ?? "",
+              season: (item.season as any) ?? "kharif",
+              seasonLabel: display.seasonLabel ?? item.season,
+              category: display.category ?? "cereal",
+              description: (item as any).description ?? display.displayName,
+            };
+          });
+          setCatalogCrops(mapped);
+          setCatalogSource("api");
+        }
+      })
+      .catch(() => {
+        // Fall back gracefully to approved static crop catalog
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const nextStep = () => {
     if (currentStep < totalSteps - 1) {
@@ -145,12 +199,12 @@ export function OnboardingFieldGuide({
   };
 
   // Step 5: Crop Handlers
-  const toggleCrop = (cropName: string) => {
+  const toggleCrop = (cropId: string) => {
     onChange((prev) => {
-      const exists = prev.currentCrops.includes(cropName);
+      const exists = prev.currentCrops.includes(cropId);
       const updated = exists
-        ? prev.currentCrops.filter((c) => c !== cropName)
-        : [...prev.currentCrops, cropName];
+        ? prev.currentCrops.filter((c) => c !== cropId)
+        : [...prev.currentCrops, cropId];
       return {
         ...prev,
         currentCrops: updated,
@@ -190,8 +244,8 @@ export function OnboardingFieldGuide({
   const equivalentHectares = (currentAcres / 2.47105).toFixed(2);
   const equivalentBighas = (currentAcres * 4.8).toFixed(1);
 
-  // Filter crops
-  const filteredCrops = PUNJAB_CROP_CATALOG.filter(
+  // Filter crops from live catalog or fallback
+  const filteredCrops = catalogCrops.filter(
     (c) =>
       c.name.toLowerCase().includes(cropSearch.toLowerCase()) ||
       c.localName.toLowerCase().includes(cropSearch.toLowerCase()) ||
@@ -765,12 +819,13 @@ export function OnboardingFieldGuide({
           {/* Crop Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 max-h-[380px] overflow-y-auto pr-1">
             {filteredCrops.map((crop) => {
-              const isSelected = state.currentCrops.includes(crop.name);
+              const isSelected = state.currentCrops.includes(crop.id);
+              const isRotationSupported = isRotationSupportedCropId(crop.id);
               return (
                 <button
                   key={crop.id}
                   type="button"
-                  onClick={() => toggleCrop(crop.name)}
+                  onClick={() => toggleCrop(crop.id)}
                   className={`text-left p-4 rounded-xl border-2 transition-all flex flex-col justify-between space-y-2 group ${isSelected
                       ? "border-forest-700 bg-forest-50/60 shadow-xs"
                       : "border-stone-200 hover:border-stone-300 bg-white"
@@ -792,11 +847,15 @@ export function OnboardingFieldGuide({
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between text-[10px] text-stone-500 font-mono border-t border-stone-100 pt-1.5">
-                    <span className="bg-stone-100 px-1.5 py-0.5 rounded text-stone-700">
+                  <div className="flex items-center justify-between text-[10px] text-stone-500 font-mono border-t border-stone-100 pt-1.5 gap-2">
+                    <span className="bg-stone-100 px-1.5 py-0.5 rounded text-stone-700 truncate">
                       {crop.seasonLabel}
                     </span>
-                    <span className="italic">{crop.scientificName}</span>
+                    {!isRotationSupported && (
+                      <span className="bg-amber-50 text-amber-800 border border-amber-200 text-[9px] px-1.5 py-0.2 rounded font-sans shrink-0">
+                        Catalog only
+                      </span>
+                    )}
                   </div>
                 </button>
               );
@@ -830,38 +889,7 @@ export function OnboardingFieldGuide({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              {
-                id: "water_saving" as FarmingGoal,
-                title: "Save water",
-                desc: "Cut groundwater pumpage, electricity bills, and diesel consumption by introducing short-duration or moisture-efficient crops.",
-                icon: "💧",
-              },
-              {
-                id: "soil_health" as FarmingGoal,
-                title: "Improve soil health",
-                desc: "Fix atmospheric nitrogen naturally with legumes, rebuild organic carbon, and break continuous rice-wheat soil compaction.",
-                icon: "🌱",
-              },
-              {
-                id: "climate_resilience" as FarmingGoal,
-                title: "Build climate resilience",
-                desc: "Buffer your wheat crop against March heatwaves and untimely monsoon fluctuations through resilient sowing schedules.",
-                icon: "🛡️",
-              },
-              {
-                id: "less_labor" as FarmingGoal,
-                title: "Reduce farm workload",
-                desc: "Allow wider turnaround windows between harvest and next sowing to eliminate rush and manage crop residue cleanly.",
-                icon: "⏱️",
-              },
-              {
-                id: "crop_rotation_diversity" as FarmingGoal,
-                title: "Explore better crop rotations",
-                desc: "Evaluate profitable, climate-suited alternatives to monoculture, including summer pulses, maize, mustard, and DSR basmati.",
-                icon: "🔄",
-              },
-            ].map((goal) => {
+            {getApprovedFarmingGoalsList(locale).map((goal) => {
               const isSelected = state.farmingGoals.includes(goal.id);
               return (
                 <button
@@ -1015,8 +1043,32 @@ export function OnboardingFieldGuide({
                   </div>
                   <span className="font-bold text-stone-900 block">
                     {state.currentCrops.length > 0
-                      ? state.currentCrops.join(", ")
+                      ? state.currentCrops
+                          .map((id) => getCropDisplayName(id, locale))
+                          .join(", ")
                       : "None recorded"}
+                  </span>
+                </div>
+
+                {/* Farming Goals */}
+                <div className="p-3 bg-white rounded-xl border border-stone-200 space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-stone-400 block">Farming Goals:</span>
+                    <button
+                      type="button"
+                      onClick={() => goToStep(5)}
+                      className="text-xs text-forest-700 hover:text-forest-900 flex items-center gap-1 font-semibold"
+                    >
+                      <EditIcon size={13} />
+                      Edit
+                    </button>
+                  </div>
+                  <span className="font-bold text-stone-900 block">
+                    {state.farmingGoals.length > 0
+                      ? state.farmingGoals
+                          .map((id) => getLocalizedGoal(id, locale).title)
+                          .join(", ")
+                      : "None selected"}
                   </span>
                 </div>
               </div>
@@ -1063,6 +1115,46 @@ export function OnboardingFieldGuide({
               </div>
             </div>
           </div>
+
+          {/* Sync Status Notifications */}
+          {syncStatus === "saving" && (
+            <div className="p-4 rounded-xl bg-forest-50 border border-forest-200 flex items-center gap-3 text-xs text-forest-900">
+              <div className="w-4 h-4 border-2 border-forest-700 border-t-transparent rounded-full animate-spin shrink-0" />
+              <span className="font-semibold">
+                Connecting to backend API and saving farmer profile...
+              </span>
+            </div>
+          )}
+
+          {syncStatus === "error" && (
+            <div className="p-4 rounded-xl bg-red-50 border border-red-200 space-y-2 text-xs text-red-900">
+              <div className="flex items-center gap-2 font-bold">
+                <span>⚠️</span>
+                <span>Profile Synchronization Notice</span>
+              </div>
+              <p className="text-[11px] text-red-800 leading-relaxed">
+                {syncErrorMessage ?? "The remote profile endpoint could not be reached. Your farm inputs are verified and safely retained."}
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={onComplete}
+                  className="px-3 py-1.5 bg-red-800 hover:bg-red-900 text-white rounded-lg font-semibold text-[11px]"
+                >
+                  Retry Synchronization
+                </button>
+                {onProceedOffline && (
+                  <button
+                    type="button"
+                    onClick={onProceedOffline}
+                    className="px-3 py-1.5 bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 rounded-lg font-semibold text-[11px]"
+                  >
+                    Proceed to Dashboard (Offline Preview)
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1080,11 +1172,18 @@ export function OnboardingFieldGuide({
         <button
           type="button"
           onClick={nextStep}
-          className="py-3 px-6 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-semibold text-xs sm:text-sm shadow-xs transition-all flex items-center gap-2"
+          disabled={syncStatus === "saving"}
+          className={`py-3 px-6 rounded-xl font-semibold text-xs sm:text-sm shadow-xs transition-all flex items-center gap-2 ${
+            syncStatus === "saving"
+              ? "bg-forest-700/60 text-white/80 cursor-not-allowed"
+              : "bg-forest-800 hover:bg-forest-900 text-white"
+          }`}
         >
           <span>
             {currentStep === totalSteps - 1
-              ? "Create my farm workspace"
+              ? syncStatus === "saving"
+                ? "Connecting..."
+                : "Create my farm workspace"
               : "Continue"}
           </span>
           <ChevronRightIcon size={16} />

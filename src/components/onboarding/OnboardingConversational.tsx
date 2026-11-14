@@ -8,7 +8,13 @@ import {
   FieldStatus,
   PUNJAB_CROP_CATALOG,
 } from "@/types/onboarding";
+import { getCropDisplayName } from "@/utils/cropCatalogAdapter";
+import {
+  getLocalizedGoal,
+  canonicalizeFarmingGoal,
+} from "@/utils/farmingGoalsAdapter";
 import { SoilTextureType, IrrigationSourceType, Location } from "@/types";
+import { ProfileSyncStatus } from "./OnboardingHarness";
 import {
   CompassIcon,
   SproutIcon,
@@ -39,6 +45,10 @@ interface OnboardingConversationalProps {
   onSwitchToFieldGuide: () => void;
   onComplete: () => void;
   onExit: () => void;
+  locale?: "en" | "pa" | "hi";
+  syncStatus?: ProfileSyncStatus;
+  syncErrorMessage?: string | null;
+  onProceedOffline?: () => void;
 }
 
 export function OnboardingConversational({
@@ -47,6 +57,10 @@ export function OnboardingConversational({
   onSwitchToFieldGuide,
   onComplete,
   onExit,
+  locale = "en",
+  syncStatus = "idle",
+  syncErrorMessage,
+  onProceedOffline,
 }: OnboardingConversationalProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
@@ -336,26 +350,26 @@ export function OnboardingConversational({
               label: "Rice (Paddy) + Wheat",
               isPrimary: true,
               action: () =>
-                handleCropSelect(["Rice (Paddy)", "Wheat"], "Rice–Wheat Monoculture"),
+                handleCropSelect(["paddy_transplanted", "bread_wheat"], "Rice–Wheat Monoculture"),
             },
             {
               label: "Rice + Wheat + Summer Moong (Triple Crop)",
               action: () =>
                 handleCropSelect(
-                  ["Rice (Paddy)", "Wheat", "Summer Moong (Green Gram)"],
+                  ["paddy_transplanted", "bread_wheat", "summer_moong"],
                   "Rice + Wheat + Summer Moong"
                 ),
             },
             {
               label: "Maize (Corn) + Wheat",
-              action: () => handleCropSelect(["Maize (Corn)", "Wheat"], "Maize + Wheat Rotation"),
+              action: () => handleCropSelect(["kharif_maize", "bread_wheat"], "Maize + Wheat Rotation"),
             },
             {
-              label: "Basmati DSR + Mustard / Raya",
+              label: "Direct-Seeded Rice (DSR) + Mustard",
               action: () =>
                 handleCropSelect(
-                  ["Basmati Rice (DSR / Traditional)", "Mustard / Raya"],
-                  "Basmati DSR + Mustard"
+                  ["paddy_dsr", "rabi_mustard"],
+                  "DSR + Mustard"
                 ),
             },
             {
@@ -391,44 +405,60 @@ export function OnboardingConversational({
             "Sproutnik's climate model balances water savings against income stability and turnaround timing.",
           options: [
             {
-              label: "💧 Save water (cut pumping hours & power bills)",
+              label: "🌾 Maximize crop yield & productivity",
               isPrimary: true,
               action: () =>
                 handleGoalSelect(
-                  ["water_saving", "soil_health"],
+                  ["improve_yield", "reduce_input_costs"],
+                  "Maximize crop yield and reduce input costs"
+                ),
+            },
+            {
+              label: "💧 Save water (cut tubewell pumping hours & power bills)",
+              action: () =>
+                handleGoalSelect(
+                  ["reduce_water_usage", "improve_soil_health"],
                   "Save water and improve soil health"
                 ),
             },
             {
-              label: "🌱 Improve soil health & fix natural nitrogen",
+              label: "🌱 Improve soil health & fix atmospheric nitrogen",
               action: () =>
                 handleGoalSelect(
-                  ["soil_health", "water_saving"],
+                  ["improve_soil_health", "reduce_water_usage"],
                   "Improve soil health and nitrogen balance"
                 ),
             },
             {
-              label: "🛡️ Build climate resilience against March heatwaves",
+              label: "📉 Reduce input costs (diesel, fertilizers, chemicals)",
               action: () =>
                 handleGoalSelect(
-                  ["climate_resilience", "water_saving"],
-                  "Protect wheat against early heatwaves"
+                  ["reduce_input_costs", "improve_soil_health"],
+                  "Reduce input costs and optimize farm economics"
                 ),
             },
             {
-              label: "⏱️ Reduce farm workload & widen turnaround window",
+              label: "🔄 Diversify beyond rice–wheat monoculture",
               action: () =>
                 handleGoalSelect(
-                  ["less_labor", "soil_health"],
-                  "Wider turnaround windows for clean residue management"
+                  ["diversify_crops", "reduce_water_usage"],
+                  "Diversify crops with pulses and oilseeds"
                 ),
             },
             {
-              label: "🔄 Explore better crop rotations (diversification)",
+              label: "💰 Improve income stability & reduce market risks",
               action: () =>
                 handleGoalSelect(
-                  ["crop_rotation_diversity", "water_saving"],
-                  "Explore alternative profitable rotations"
+                  ["improve_income_stability", "diversify_crops"],
+                  "Ensure steady income throughout the year"
+                ),
+            },
+            {
+              label: "🛡️ Manage climate risks (March heat stress & irregular rain)",
+              action: () =>
+                handleGoalSelect(
+                  ["manage_climate_risk", "reduce_water_usage"],
+                  "Build climate resilience against extreme weather"
                 ),
             },
           ],
@@ -549,9 +579,8 @@ export function OnboardingConversational({
               return (
                 <div
                   key={msg.id}
-                  className={`flex items-start gap-3 ${
-                    isAssistant ? "justify-start" : "justify-end"
-                  }`}
+                  className={`flex items-start gap-3 ${isAssistant ? "justify-start" : "justify-end"
+                    }`}
                 >
                   {isAssistant && (
                     <div className="w-8 h-8 rounded-full bg-forest-800 text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold shadow-xs">
@@ -560,11 +589,10 @@ export function OnboardingConversational({
                   )}
 
                   <div
-                    className={`max-w-[85%] rounded-2xl p-4 space-y-2.5 text-xs sm:text-sm leading-relaxed ${
-                      isAssistant
-                        ? "bg-[#faf9f5] text-stone-900 border border-stone-200/90 rounded-tl-sm"
-                        : "bg-forest-800 text-white rounded-tr-sm font-medium"
-                    }`}
+                    className={`max-w-[85%] rounded-2xl p-4 space-y-2.5 text-xs sm:text-sm leading-relaxed ${isAssistant
+                      ? "bg-[#faf9f5] text-stone-900 border border-stone-200/90 rounded-tl-sm"
+                      : "bg-forest-800 text-white rounded-tr-sm font-medium"
+                      }`}
                   >
                     <p>{msg.text}</p>
 
@@ -583,13 +611,12 @@ export function OnboardingConversational({
                             key={optIdx}
                             type="button"
                             onClick={opt.action}
-                            className={`py-2 px-3.5 rounded-xl text-left text-xs font-semibold transition-all border ${
-                              opt.isPrimary
-                                ? "bg-forest-800 hover:bg-forest-900 text-white border-forest-800 shadow-2xs"
-                                : opt.isSkip
+                            className={`py-2 px-3.5 rounded-xl text-left text-xs font-semibold transition-all border ${opt.isPrimary
+                              ? "bg-forest-800 hover:bg-forest-900 text-white border-forest-800 shadow-2xs"
+                              : opt.isSkip
                                 ? "bg-white hover:bg-stone-50 text-stone-500 border-stone-200"
                                 : "bg-white hover:bg-stone-50 text-stone-800 border-stone-200"
-                            }`}
+                              }`}
                           >
                             {opt.label}
                           </button>
@@ -663,15 +690,14 @@ export function OnboardingConversational({
                 )}
               </div>
               <span
-                className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold border ${
-                  state.locationStatus === "known"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : state.locationStatus === "unknown"
+                className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold border ${state.locationStatus === "known"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  : state.locationStatus === "unknown"
                     ? "bg-amber-50 text-amber-800 border-amber-200"
                     : state.locationStatus === "skipped"
-                    ? "bg-stone-100 text-stone-600 border-stone-200"
-                    : "bg-stone-50 text-stone-400 border-stone-200"
-                }`}
+                      ? "bg-stone-100 text-stone-600 border-stone-200"
+                      : "bg-stone-50 text-stone-400 border-stone-200"
+                  }`}
               >
                 {state.locationStatus}
               </span>
@@ -685,20 +711,19 @@ export function OnboardingConversational({
                   {state.landArea !== null
                     ? `${state.landArea} ${state.landUnit}`
                     : state.landAreaStatus === "skipped"
-                    ? "Skipped by farmer"
-                    : "Not specified"}
+                      ? "Skipped by farmer"
+                      : "Not specified"}
                 </span>
               </div>
               <span
-                className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold border ${
-                  state.landAreaStatus === "known"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : state.landAreaStatus === "unknown"
+                className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold border ${state.landAreaStatus === "known"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  : state.landAreaStatus === "unknown"
                     ? "bg-amber-50 text-amber-800 border-amber-200"
                     : state.landAreaStatus === "skipped"
-                    ? "bg-stone-100 text-stone-600 border-stone-200"
-                    : "bg-stone-50 text-stone-400 border-stone-200"
-                }`}
+                      ? "bg-stone-100 text-stone-600 border-stone-200"
+                      : "bg-stone-50 text-stone-400 border-stone-200"
+                  }`}
               >
                 {state.landAreaStatus}
               </span>
@@ -712,22 +737,21 @@ export function OnboardingConversational({
                   {state.soilTexture
                     ? state.soilTexture.replace("_", " ")
                     : state.soilStatus === "unknown"
-                    ? "I'm not sure (Untested)"
-                    : state.soilStatus === "skipped"
-                    ? "Skipped by farmer"
-                    : "Not specified"}
+                      ? "I'm not sure (Untested)"
+                      : state.soilStatus === "skipped"
+                        ? "Skipped by farmer"
+                        : "Not specified"}
                 </span>
               </div>
               <span
-                className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold border ${
-                  state.soilStatus === "known"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : state.soilStatus === "unknown"
+                className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold border ${state.soilStatus === "known"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  : state.soilStatus === "unknown"
                     ? "bg-amber-50 text-amber-800 border-amber-200"
                     : state.soilStatus === "skipped"
-                    ? "bg-stone-100 text-stone-600 border-stone-200"
-                    : "bg-stone-50 text-stone-400 border-stone-200"
-                }`}
+                      ? "bg-stone-100 text-stone-600 border-stone-200"
+                      : "bg-stone-50 text-stone-400 border-stone-200"
+                  }`}
               >
                 {state.soilStatus}
               </span>
@@ -741,22 +765,21 @@ export function OnboardingConversational({
                   {state.irrigationSource
                     ? state.irrigationSource.replace("_", " ")
                     : state.irrigationStatus === "unknown"
-                    ? "I'm not sure"
-                    : state.irrigationStatus === "skipped"
-                    ? "Skipped by farmer"
-                    : "Not specified"}
+                      ? "I'm not sure"
+                      : state.irrigationStatus === "skipped"
+                        ? "Skipped by farmer"
+                        : "Not specified"}
                 </span>
               </div>
               <span
-                className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold border ${
-                  state.irrigationStatus === "known"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : state.irrigationStatus === "unknown"
+                className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold border ${state.irrigationStatus === "known"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  : state.irrigationStatus === "unknown"
                     ? "bg-amber-50 text-amber-800 border-amber-200"
                     : state.irrigationStatus === "skipped"
-                    ? "bg-stone-100 text-stone-600 border-stone-200"
-                    : "bg-stone-50 text-stone-400 border-stone-200"
-                }`}
+                      ? "bg-stone-100 text-stone-600 border-stone-200"
+                      : "bg-stone-50 text-stone-400 border-stone-200"
+                  }`}
               >
                 {state.irrigationStatus}
               </span>
@@ -767,11 +790,63 @@ export function OnboardingConversational({
               <span className="text-[10px] text-stone-400 block">Current Crops:</span>
               <span className="font-semibold text-stone-900 block">
                 {state.currentCrops.length > 0
-                  ? state.currentCrops.join(", ")
+                  ? state.currentCrops
+                    .map((id) => getCropDisplayName(id, locale))
+                    .join(", ")
                   : "None recorded"}
               </span>
             </div>
+
+            {/* Farming Goals */}
+            <div className="p-3 bg-white rounded-xl border border-stone-200 space-y-1">
+              <span className="text-[10px] text-stone-400 block">Farming Goals:</span>
+              <span className="font-semibold text-stone-900 block">
+                {state.farmingGoals.length > 0
+                  ? state.farmingGoals
+                    .map((id) => getLocalizedGoal(id, locale).title)
+                    .join(", ")
+                  : "None selected"}
+              </span>
+            </div>
           </div>
+
+          {/* Sync Status Notifications in Conversational Mode */}
+          {syncStatus === "saving" && (
+            <div className="p-3 bg-forest-50 border border-forest-200 rounded-xl flex items-center gap-2 text-xs text-forest-900">
+              <div className="w-3.5 h-3.5 border-2 border-forest-700 border-t-transparent rounded-full animate-spin shrink-0" />
+              <span className="font-semibold">Connecting to backend and saving profile...</span>
+            </div>
+          )}
+
+          {syncStatus === "error" && (
+            <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl space-y-2 text-xs text-red-900">
+              <div className="flex items-center gap-2 font-bold">
+                <span>⚠️</span>
+                <span>Profile Synchronization Notice</span>
+              </div>
+              <p className="text-[11px] text-red-800">
+                {syncErrorMessage ?? "Backend profile service could not be reached. All your entries are verified and preserved."}
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={onComplete}
+                  className="px-3 py-1 bg-red-800 hover:bg-red-900 text-white rounded-lg font-semibold text-[11px]"
+                >
+                  Retry
+                </button>
+                {onProceedOffline && (
+                  <button
+                    type="button"
+                    onClick={onProceedOffline}
+                    className="px-3 py-1 bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 rounded-lg font-semibold text-[11px]"
+                  >
+                    Proceed to Dashboard (Offline Preview)
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           <p className="text-[11px] text-stone-500 leading-relaxed border-t border-stone-200 pt-3">
             Changes made in this conversation are preserved automatically if you switch to the field guide or return to the climate dashboard.

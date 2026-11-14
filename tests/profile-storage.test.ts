@@ -7,7 +7,16 @@ import {
   isValidStoredProfileEnvelope,
   PROFILE_STORAGE_KEY,
   LEGACY_PROFILE_STORAGE_KEY,
+  ONBOARDING_DRAFT_STORAGE_KEY,
   StoredProfileEnvelope,
+  OnboardingDraftEnvelope,
+  isValidOnboardingDraftEnvelope,
+  loadStoredProfile,
+  saveStoredProfile,
+  clearStoredProfile,
+  loadOnboardingDraft,
+  saveOnboardingDraft,
+  clearOnboardingDraft,
 } from "../src/services/profileStorage";
 import { createKnownField, FarmerProfile } from "../src/types";
 
@@ -214,6 +223,81 @@ describe("Farmer Profile Client Storage Infrastructure", () => {
       expect(mockStorage.getItem(LEGACY_PROFILE_STORAGE_KEY)).toBe(JSON.stringify(legacyData));
       // Verify new profile storage was NOT touched
       expect(mockStorage.getItem(PROFILE_STORAGE_KEY)).toBeNull();
+    });
+  });
+
+  describe("Onboarding Draft Persistence", () => {
+    it("persists and restores an onboarding draft under sproutnik:onboarding-draft:v1 without inventing a profile ID", () => {
+      const saved = saveOnboardingDraft(validProfile, {
+        mode: "field-guide",
+        currentStepIndex: 3,
+        landUnit: "kanals",
+      });
+      expect(saved).toBe(true);
+
+      const raw = mockStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY);
+      expect(raw).toBeTruthy();
+
+      const envelope = JSON.parse(raw!) as OnboardingDraftEnvelope;
+      expect(envelope.schemaVersion).toBe(1);
+      expect(envelope.draft.soilTexture.status).toBe("known");
+      expect(envelope.rawState?.landUnit).toBe("kanals");
+      expect(envelope.rawState?.currentStepIndex).toBe(3);
+      expect((envelope as unknown as { profileId?: string }).profileId).toBeUndefined();
+
+      const loaded = loadOnboardingDraft();
+      expect(loaded).not.toBeNull();
+      expect(loaded?.schemaVersion).toBe(1);
+      expect(loaded?.draft.location.status).toBe("known");
+      expect(loaded?.rawState?.landUnit).toBe("kanals");
+    });
+
+    it("clears the draft from storage and memory without modifying the finalized profile", () => {
+      saveStoredProfile("final_profile_99", validProfile);
+      saveOnboardingDraft(validProfile);
+
+      expect(loadOnboardingDraft()).not.toBeNull();
+      expect(loadStoredProfile()).not.toBeNull();
+
+      const draftCleared = clearOnboardingDraft();
+      expect(draftCleared).toBe(true);
+
+      // Draft is removed
+      expect(loadOnboardingDraft()).toBeNull();
+      expect(mockStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY)).toBeNull();
+
+      // Finalized profile remains intact
+      expect(loadStoredProfile()?.profileId).toBe("final_profile_99");
+    });
+
+    it("rejects invalid or malformed draft envelopes gracefully", () => {
+      mockStorage.setItem(ONBOARDING_DRAFT_STORAGE_KEY, "invalid-json");
+      clearOnboardingDraft();
+      mockStorage.setItem(ONBOARDING_DRAFT_STORAGE_KEY, "invalid-json");
+      expect(loadOnboardingDraft()).toBeNull();
+
+      mockStorage.setItem(
+        ONBOARDING_DRAFT_STORAGE_KEY,
+        JSON.stringify({ schemaVersion: 2, draft: validProfile })
+      );
+      expect(loadOnboardingDraft()).toBeNull();
+      expect(isValidOnboardingDraftEnvelope({ schemaVersion: 2 })).toBe(false);
+    });
+
+    it("handles localStorage quota errors when saving draft and retains draft in memory", () => {
+      clearOnboardingDraft();
+      vi.spyOn(mockStorage, "setItem").mockImplementation(() => {
+        const err = new Error("QuotaExceededError");
+        err.name = "QuotaExceededError";
+        throw err;
+      });
+
+      const saved = saveOnboardingDraft(validProfile);
+      expect(saved).toBe(false);
+
+      const inMemory = loadOnboardingDraft();
+      expect(inMemory).not.toBeNull();
+      expect(inMemory?.draft.irrigationSource.status).toBe("known");
     });
   });
 });

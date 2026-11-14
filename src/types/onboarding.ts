@@ -23,6 +23,8 @@ import type {
   FarmingGoal,
 } from "./index";
 
+export type { FarmingGoal };
+
 export type ProfileFieldSource = "user" | "imported" | "verified";
 
 export type ProfileFieldStatus = "known" | "unknown" | "skipped" | "not_provided";
@@ -373,6 +375,22 @@ export const INITIAL_ONBOARDING_STATE: OnboardingState = {
   goalsStatus: "not_provided",
 };
 
+export interface FieldGuideStepItem {
+  id: string;
+  title: string;
+  shortDesc: string;
+}
+
+export const FIELD_GUIDE_STEPS: readonly FieldGuideStepItem[] = [
+  { id: "location", title: "Define workspace", shortDesc: "Farm location & NASA grid" },
+  { id: "land_area", title: "Land area", shortDesc: "Holding size & units" },
+  { id: "soil", title: "Soil type", shortDesc: "Soil characteristics" },
+  { id: "irrigation", title: "Irrigation", shortDesc: "Water sources" },
+  { id: "current_crops", title: "Current crops", shortDesc: "Crops grown on your farm" },
+  { id: "goals", title: "Farming goals", shortDesc: "Priorities to improve" },
+  { id: "review", title: "Review farm details", shortDesc: "Summary & verification" },
+] as const;
+
 export interface AuditedFarmerProfileResult {
   backendProfile: FarmerProfile;
   farmerReported: {
@@ -494,6 +512,7 @@ export function mapOnboardingToFarmerProfile(
         state: state.location.state,
         countryCode: "IN",
         selectionMethod: state.isDemonstrationLocation ? "map" : "gps",
+        isDemonstration: state.isDemonstrationLocation,
       },
       source: state.isDemonstrationLocation ? "imported" : "user",
       updatedAt: now,
