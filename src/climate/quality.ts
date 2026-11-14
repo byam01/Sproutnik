@@ -8,6 +8,44 @@ export function isLeapYear(year: number): boolean {
 }
 
 /**
+ * Validates whether a given year, month, and day constitute a real Gregorian calendar date.
+ */
+export function isValidDate(year: number, month: number, day: number): boolean {
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return false;
+  }
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    return false;
+  }
+  const daysInMonths = [
+    31,
+    isLeapYear(year) ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
+  ];
+  return day <= daysInMonths[month - 1];
+}
+
+/**
+ * Validates whether a string is a valid YYYY-MM-DD Gregorian calendar date.
+ */
+export function isValidDateString(dateStr: string): boolean {
+  if (typeof dateStr !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return false;
+  }
+  const parts = dateStr.split("-").map((p) => parseInt(p, 10));
+  return isValidDate(parts[0], parts[1], parts[2]);
+}
+
+/**
  * Returns expected number of days in a year
  */
 export function getExpectedDaysInYear(year: number): number {
@@ -64,28 +102,63 @@ export function evaluateDataQuality(
   completenessThresholdPercent: number = PROVISIONAL_COMPLETENESS_THRESHOLD_PERCENT
 ): DataQuality {
   const expectedDates = generateExpectedDates(startYear, endYear);
+  const expectedDatesSet = new Set(expectedDates);
   const totalExpectedDays = expectedDates.length;
-  const totalReceivedDays = records.length;
 
-  const receivedDatesMap = new Map<string, DailyClimateRecord>();
-  const duplicates: string[] = [];
+  const seenValidDates = new Set<string>();
+  const duplicateValidDates: string[] = [];
+  const validReceivedDatesMap = new Map<string, DailyClimateRecord>();
+  let outOfRangeCount = 0;
+  let malformedOrInconsistentCount = 0;
 
   for (const record of records) {
-    if (receivedDatesMap.has(record.date)) {
-      duplicates.push(record.date);
+    // 1. Validate date string format and Gregorian calendar date validity
+    if (!isValidDateString(record.date)) {
+      malformedOrInconsistentCount++;
+      continue;
+    }
+
+    // 2. Confirm that embedded year, month, and day agree with record.year, record.month, record.day
+    const parts = record.date.split("-").map((p) => parseInt(p, 10));
+    const embYear = parts[0];
+    const embMonth = parts[1];
+    const embDay = parts[2];
+
+    if (
+      record.year !== embYear ||
+      record.month !== embMonth ||
+      record.day !== embDay
+    ) {
+      malformedOrInconsistentCount++;
+      continue;
+    }
+
+    // 3. Detect duplicates among valid dates, not malformed or inconsistent records
+    if (seenValidDates.has(record.date)) {
+      duplicateValidDates.push(record.date);
+      continue;
+    }
+    seenValidDates.add(record.date);
+
+    // 4. Ensure out-of-period records cannot increase completeness
+    if (expectedDatesSet.has(record.date)) {
+      validReceivedDatesMap.set(record.date, record);
     } else {
-      receivedDatesMap.set(record.date, record);
+      outOfRangeCount++;
     }
   }
 
+  // totalReceivedDays represents unique valid calendar dates within the requested period
+  const totalReceivedDays = validReceivedDatesMap.size;
+
   const missingDates: string[] = [];
   for (const expDate of expectedDates) {
-    if (!receivedDatesMap.has(expDate)) {
+    if (!validReceivedDatesMap.has(expDate)) {
       missingDates.push(expDate);
     }
   }
 
-  // Count non-null values per variable
+  // Count non-null observations per variable independently
   let validPrecipCount = 0;
   let validTempCount = 0;
 
@@ -98,14 +171,22 @@ export function evaluateDataQuality(
     yearlyTempCounts[y] = 0;
   }
 
-  for (const rec of Array.from(receivedDatesMap.values())) {
-    if (rec.precipitationMm !== null) {
+  for (const rec of Array.from(validReceivedDatesMap.values())) {
+    if (
+      rec.precipitationMm !== null &&
+      !isNaN(rec.precipitationMm) &&
+      Number.isFinite(rec.precipitationMm)
+    ) {
       validPrecipCount++;
       if (yearlyPrecipCounts[rec.year] !== undefined) {
         yearlyPrecipCounts[rec.year]++;
       }
     }
-    if (rec.tempMeanC !== null) {
+    if (
+      rec.tempMeanC !== null &&
+      !isNaN(rec.tempMeanC) &&
+      Number.isFinite(rec.tempMeanC)
+    ) {
       validTempCount++;
       if (yearlyTempCounts[rec.year] !== undefined) {
         yearlyTempCounts[rec.year]++;
@@ -136,8 +217,16 @@ export function evaluateDataQuality(
       `Detected ${missingDates.length} missing calendar days in historical series between ${startYear} and ${endYear}.`
     );
   }
-  if (duplicates.length > 0) {
-    notes.push(`Detected and deduplicated ${duplicates.length} duplicate date entries.`);
+  if (duplicateValidDates.length > 0) {
+    notes.push(`Detected and deduplicated ${duplicateValidDates.length} duplicate date entries.`);
+  }
+  if (outOfRangeCount > 0) {
+    notes.push(`Detected and excluded ${outOfRangeCount} record(s) outside requested range [${startYear}-${endYear}].`);
+  }
+  if (malformedOrInconsistentCount > 0) {
+    notes.push(
+      `Detected and excluded ${malformedOrInconsistentCount} malformed or invalid calendar date(s) / inconsistent record(s).`
+    );
   }
   if (excludedYears.length > 0) {
     notes.push(

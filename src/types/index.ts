@@ -59,6 +59,37 @@ export interface SeasonalRainfall {
   postMonsoonMm: number;
 }
 
+export interface IndicatorAvailabilityItem {
+  /** Whether sufficient observations were available to compute this indicator */
+  available: boolean;
+  /** Number of valid daily observations or seasonal totals contributing to calculation */
+  validObservationCount?: number;
+  /** Number of valid calendar or seasonal years contributing */
+  validYearCount?: number;
+  /** True if based on 2 or more complete years/seasons; false if single-year observation */
+  isMultiYear?: boolean;
+  /** Reason why the indicator is unavailable or provisional */
+  reason?: string;
+}
+
+export interface SeasonalRainfallAvailability {
+  winter: IndicatorAvailabilityItem;
+  summer: IndicatorAvailabilityItem;
+  monsoon: IndicatorAvailabilityItem;
+  postMonsoon: IndicatorAvailabilityItem;
+}
+
+export interface IndicatorAvailability {
+  annualRainfall: IndicatorAvailabilityItem;
+  meanAnnualTemperature: IndicatorAvailabilityItem;
+  meanAnnualMaxTemperature: IndicatorAvailabilityItem;
+  seasonalRainfall: SeasonalRainfallAvailability;
+  monthlyMaxTemperature: Record<number, IndicatorAvailabilityItem>;
+  monthlyPrecipitation: Record<number, IndicatorAvailabilityItem>;
+  rainfallVariability: IndicatorAvailabilityItem;
+  drySeasonDeficit: IndicatorAvailabilityItem;
+}
+
 export interface ClimateIndicators {
   period: ClimatePeriod;
   location: Location;
@@ -100,6 +131,12 @@ export interface ClimateIndicators {
 
   /** Data quality and completeness metadata */
   quality: DataQuality;
+
+  /**
+   * Additive indicator availability metadata distinguishing measured
+   * calculations from backward-compatible fallback values.
+   */
+  availability?: IndicatorAvailability;
 }
 
 export interface DataQuality {
