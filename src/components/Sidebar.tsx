@@ -158,6 +158,25 @@ export function Sidebar({
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 block mb-2">
               Dashboard Navigation
             </span>
+            <a
+              href="/onboarding"
+              className="w-full text-left px-3 py-2.5 rounded-xl transition-all flex items-center gap-3 group bg-forest-50/70 hover:bg-forest-100 text-forest-900 border border-forest-200/80 mb-2"
+            >
+              <div className="p-1.5 rounded-lg bg-forest-600 text-white">
+                <SproutIcon size={16} />
+              </div>
+              <div className="leading-tight">
+                <div className="text-xs font-bold flex items-center gap-1.5">
+                  Farmer Onboarding
+                  <span className="text-[9px] bg-forest-200 text-forest-900 px-1 py-0.2 rounded font-mono">
+                    NEW
+                  </span>
+                </div>
+                <div className="text-[10px] text-forest-700">
+                  Compare 3 prototype flows
+                </div>
+              </div>
+            </a>
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;
