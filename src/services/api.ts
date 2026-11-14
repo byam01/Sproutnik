@@ -3,7 +3,7 @@
  *
  * Provides typed, resilient HTTP client functions for all backend endpoints:
  * - GET /api/climate
- * - POST /api/rotations
+ * - GET /api/rotations
  * - POST /api/farmer-profile
  * - GET /api/farmer-profile/[profileId]
  * - PATCH /api/farmer-profile/[profileId]
