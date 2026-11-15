@@ -163,6 +163,44 @@ describe("Frontend Farmer Profile API Client", () => {
     }
   });
 
+  it("createFarmerProfile strips placeholder empty profileId from payload", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({ success: true, data: { profileId: "new_server_id" } }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const payloadWithEmptyId: any = {
+      ...TEST_PROFILE,
+      profileId: "",
+    };
+
+    const res = await createFarmerProfile(payloadWithEmptyId);
+    expect(res.success).toBe(true);
+
+    const callBody = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(callBody.profileId).toBeUndefined();
+  });
+
+  it("updateFarmerProfile strips immutable fields (profileId, createdAt) from payload", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({ success: true, data: TEST_PROFILE }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const fullProfileAsUpdate: any = {
+      ...TEST_PROFILE,
+    };
+
+    const res = await updateFarmerProfile("profile_remote_001", fullProfileAsUpdate);
+    expect(res.success).toBe(true);
+
+    const callBody = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(callBody.profileId).toBeUndefined();
+    expect(callBody.createdAt).toBeUndefined();
+  });
+
   it("fetchCropsApi calls GET /api/crops and returns available crops catalog", async () => {
     const mockResponse = {
       success: true,

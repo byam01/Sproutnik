@@ -354,6 +354,16 @@ export async function createFarmerProfileApi(
   const url = "/api/farmer-profile";
   const timeoutCtx = setupTimeoutSignal(options);
 
+  // Sanitize payload: strip empty/null placeholder profileId if caller provided an unpersisted FarmerProfile
+  let cleanInput = profileInput;
+  if (profileInput && typeof profileInput === "object") {
+    const p = { ...(profileInput as Record<string, unknown>) };
+    if (p.profileId === "" || p.profileId === null) {
+      delete p.profileId;
+    }
+    cleanInput = p as CreateFarmerProfileInput | CreateFarmerProfileRequest;
+  }
+
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -362,7 +372,7 @@ export async function createFarmerProfileApi(
         Accept: "application/json",
       },
       cache: "no-store",
-      body: JSON.stringify(profileInput),
+      body: JSON.stringify(cleanInput),
       signal: timeoutCtx.signal,
     });
 
@@ -447,6 +457,13 @@ export async function updateFarmerProfileApi(
   const url = `/api/farmer-profile/${encodeURIComponent(profileId.trim())}`;
   const timeoutCtx = setupTimeoutSignal(options);
 
+  // Sanitize updates: strip immutable fields (profileId, createdAt) if caller passed full model
+  let cleanUpdates = updates;
+  if (updates && typeof updates === "object") {
+    const { profileId: _pid, createdAt: _created, ...rest } = updates as Record<string, unknown>;
+    cleanUpdates = rest as UpdateFarmerProfileInput | UpdateFarmerProfileRequest;
+  }
+
   try {
     const res = await fetch(url, {
       method: "PATCH",
@@ -455,7 +472,7 @@ export async function updateFarmerProfileApi(
         Accept: "application/json",
       },
       cache: "no-store",
-      body: JSON.stringify(updates),
+      body: JSON.stringify(cleanUpdates),
       signal: timeoutCtx.signal,
     });
 

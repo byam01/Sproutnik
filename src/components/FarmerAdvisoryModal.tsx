@@ -70,26 +70,36 @@ export function FarmerAdvisoryModal({
             <button
               type="button"
               onClick={() => printAdvisoryReport(reportData)}
-              className="px-3.5 py-1.5 bg-forest-700 hover:bg-forest-800 active:bg-forest-900 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+              className="px-3.5 py-1.5 bg-forest-700 hover:bg-forest-800 active:bg-forest-900 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="Open browser print dialog — select 'Save as PDF' to save an offline document"
             >
-              <span>🖨️ Print / Save PDF</span>
+              <span>🖨️ Print / Save as PDF</span>
             </button>
             <button
               type="button"
               onClick={() => downloadAdvisoryReportHtml(reportData)}
-              className="px-3 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 text-xs font-medium rounded-xl border border-slate-200 transition-colors"
+              className="px-3 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 text-xs font-medium rounded-xl border border-slate-200 transition-colors cursor-pointer"
+              title="Download standalone offline HTML file"
             >
-              Download HTML
+              Download Offline HTML
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               aria-label="Close advisory report"
             >
               <XIcon size={20} />
             </button>
           </div>
+        </div>
+
+        {/* PDF Export Guidance Banner */}
+        <div className="bg-emerald-50 border-b border-emerald-100 px-5 py-2 text-[11px] text-emerald-900 flex items-center gap-2 font-medium">
+          <InfoIcon size={14} className="text-emerald-700 shrink-0" />
+          <span>
+            <strong>How to save as PDF:</strong> Click <em>Print / Save as PDF</em> above, then set your browser&apos;s printer destination to <strong>&ldquo;Save as PDF&rdquo;</strong> to download an official offline PDF.
+          </span>
         </div>
 
         {/* Scrollable Document Preview (Styled as A4 Advisory Document) */}
@@ -117,13 +127,12 @@ export function FarmerAdvisoryModal({
 
             {/* What-If Scenario / Baseline Disclosure */}
             <div
-              className={`p-3.5 rounded-xl border text-xs leading-relaxed ${
-                isSimulated
+              className={`p-3.5 rounded-xl border text-xs leading-relaxed ${isSimulated
                   ? "bg-amber-50/80 border-amber-300 text-amber-950"
                   : reportData.scenarioDisclosure.isProfileConfirmed
-                  ? "bg-emerald-50/80 border-emerald-200 text-emerald-950"
-                  : "bg-sky-50/80 border-sky-200 text-sky-950"
-              }`}
+                    ? "bg-emerald-50/80 border-emerald-200 text-emerald-950"
+                    : "bg-sky-50/80 border-sky-200 text-sky-950"
+                }`}
             >
               <strong className="block font-bold text-[11px] uppercase tracking-wider mb-0.5">
                 {reportData.scenarioDisclosure.bannerTitle}
@@ -140,11 +149,10 @@ export function FarmerAdvisoryModal({
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-slate-400 font-bold uppercase block">Location &amp; Area</span>
-                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold ${
-                      reportData.farmContext.fieldProvenance?.location === "farmer_provided"
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold ${reportData.farmContext.fieldProvenance?.location === "farmer_provided"
                         ? "bg-emerald-100 text-emerald-800"
                         : "bg-slate-200 text-slate-700"
-                    }`}>
+                      }`}>
                       {reportData.farmContext.fieldProvenance?.location === "farmer_provided" ? "Farmer-Provided" : "Demonstration Default"}
                     </span>
                   </div>
@@ -155,11 +163,10 @@ export function FarmerAdvisoryModal({
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-slate-400 font-bold uppercase block">Soil Texture</span>
-                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold ${
-                      reportData.farmContext.fieldProvenance?.soilTexture === "farmer_provided"
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold ${reportData.farmContext.fieldProvenance?.soilTexture === "farmer_provided"
                         ? "bg-emerald-100 text-emerald-800"
                         : "bg-slate-200 text-slate-700"
-                    }`}>
+                      }`}>
                       {reportData.farmContext.fieldProvenance?.soilTexture === "farmer_provided" ? "Farmer-Provided" : "Regional Default"}
                     </span>
                   </div>
@@ -174,11 +181,10 @@ export function FarmerAdvisoryModal({
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-slate-400 font-bold uppercase block">Irrigation Source</span>
-                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold ${
-                      reportData.farmContext.fieldProvenance?.irrigationSource === "farmer_provided"
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold ${reportData.farmContext.fieldProvenance?.irrigationSource === "farmer_provided"
                         ? "bg-emerald-100 text-emerald-800"
                         : "bg-slate-200 text-slate-700"
-                    }`}>
+                      }`}>
                       {reportData.farmContext.fieldProvenance?.irrigationSource === "farmer_provided" ? "Farmer-Provided" : "Regional Default"}
                     </span>
                   </div>
@@ -255,11 +261,10 @@ export function FarmerAdvisoryModal({
                         </td>
                         <td className="p-2.5">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                              r.isFeasible
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold border ${r.isFeasible
                                 ? "bg-emerald-100 text-emerald-900 border-emerald-200"
                                 : "bg-rose-100 text-rose-900 border-rose-200"
-                            }`}
+                              }`}
                           >
                             {r.isFeasible ? "✓ Viable" : "⚠️ Restricted"}
                           </span>
@@ -279,11 +284,10 @@ export function FarmerAdvisoryModal({
                 .map((r) => (
                   <div
                     key={r.rotationId}
-                    className={`p-2.5 rounded-xl border text-[11px] leading-relaxed ${
-                      !r.isFeasible
+                    className={`p-2.5 rounded-xl border text-[11px] leading-relaxed ${!r.isFeasible
                         ? "bg-rose-50/70 border-rose-200 text-rose-950"
                         : "bg-amber-50/70 border-amber-200 text-amber-950"
-                    }`}
+                      }`}
                   >
                     <strong>[{r.name}] {!r.isFeasible ? "Physical Constraint:" : "Operational Warning:"} </strong>
                     {r.rejectionReasons.length > 0
@@ -333,13 +337,12 @@ export function FarmerAdvisoryModal({
                           return (
                             <td key={r.rotationId} className="p-2.5">
                               <span
-                                className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider border ${
-                                  score === "favorable"
+                                className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider border ${score === "favorable"
                                     ? "bg-emerald-100 text-emerald-900 border-emerald-200"
                                     : score === "caution" || score === "unfavorable"
-                                    ? "bg-amber-100 text-amber-900 border-amber-200"
-                                    : "bg-slate-100 text-slate-700 border-slate-200"
-                                }`}
+                                      ? "bg-amber-100 text-amber-900 border-amber-200"
+                                      : "bg-slate-100 text-slate-700 border-slate-200"
+                                  }`}
                               >
                                 {score}
                               </span>

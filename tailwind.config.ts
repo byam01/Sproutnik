@@ -35,6 +35,10 @@ const config: Config = {
           950: "#1a241b",
         },
       },
+      fontFamily: {
+        sans: ["var(--font-inter)", "Inter", "system-ui", "-apple-system", "sans-serif"],
+        heading: ["var(--font-manrope)", "Manrope", "sans-serif"],
+      },
     },
   },
   plugins: [],

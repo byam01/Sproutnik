@@ -32,14 +32,18 @@ export function DashboardHeader({
         {/* Brand and titles */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-forest-600 text-white shadow-sm">
+            <a href="/" className="p-2 rounded-xl bg-forest-600 hover:bg-forest-700 text-white shadow-sm transition-colors" title="Return to Sproutnik Home">
               <CompassIcon size={24} />
-            </div>
+            </a>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                <a href="/" className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 hover:text-forest-800 transition-colors">
+                  Sproutnik
+                </a>
+                <span className="text-slate-300 font-light">|</span>
+                <span className="text-sm font-semibold text-forest-800">
                   Rotation Compass
-                </h1>
+                </span>
                 <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-forest-100 text-forest-800 border border-forest-200">
                   NASA Space Apps Challenge 2026
                 </span>
@@ -53,6 +57,13 @@ export function DashboardHeader({
 
         {/* Controls: Mode Switch & Refresh & Onboarding */}
         <div className="flex items-center gap-2.5 self-start lg:self-auto flex-wrap">
+          <a
+            href="/"
+            className="px-3 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 shadow-2xs"
+          >
+            ← Home
+          </a>
+
           <a
             href="/onboarding"
             className="px-3 py-1.5 bg-forest-50 hover:bg-forest-100 active:bg-forest-200 text-forest-800 border border-forest-200 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 shadow-2xs"
@@ -69,8 +80,8 @@ export function DashboardHeader({
                 if (isMock) onToggleMock();
               }}
               className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${!isMock
-                  ? "bg-white text-forest-800 shadow-sm font-semibold"
-                  : "text-slate-600 hover:text-slate-900"
+                ? "bg-white text-forest-800 shadow-sm font-semibold"
+                : "text-slate-600 hover:text-slate-900"
                 }`}
             >
               <span className={`w-2 h-2 rounded-full ${!isMock ? "bg-forest-600" : "bg-slate-400"}`} />
@@ -82,8 +93,8 @@ export function DashboardHeader({
                 if (!isMock) onToggleMock();
               }}
               className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${isMock
-                  ? "bg-white text-forest-800 shadow-sm font-semibold"
-                  : "text-slate-600 hover:text-slate-900"
+                ? "bg-white text-forest-800 shadow-sm font-semibold"
+                : "text-slate-600 hover:text-slate-900"
                 }`}
             >
               <span className={`w-2 h-2 rounded-full ${isMock ? "bg-amber-500" : "bg-slate-400"}`} />
