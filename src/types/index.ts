@@ -297,6 +297,44 @@ export interface AssessmentTradeoff {
   provisionalWeight?: number; // transparently disclosed product choice
 }
 
+export type SuitabilityStatus =
+  | "highly_suitable"
+  | "suitable_with_mitigation"
+  | "conditionally_suitable"
+  | "unfeasible";
+
+export interface AgronomicRisk {
+  category: "water" | "soil" | "climate" | "turnaround" | "pest_disease";
+  severity: "critical" | "manageable" | "advisory";
+  title: string;
+  description: string;
+  mitigationGuidance?: string;
+}
+
+export interface RecommendationExplanation {
+  suitabilityStatus: SuitabilityStatus;
+  overallRationale: string;
+  soilSuitabilityRationale: string;
+  irrigationSuitabilityRationale: string;
+  climateCompatibilityRationale: string;
+  actionableNextSteps: string[];
+}
+
+export interface DataProvenanceMeta {
+  climateDataSource: string;
+  isMock: boolean;
+  climateObservationPeriod: string;
+  agronomicEvidenceSources: string[];
+  modelingNotice: string;
+  farmerContextApplied: {
+    soilTexture: string;
+    isSoilTextureReported: boolean;
+    irrigationSource: string;
+    isIrrigationSourceReported: boolean;
+    groundwaterDepthMeters?: number;
+  };
+}
+
 export interface RotationComparisonResult {
   rotationId: string;
   rotationName: string;
@@ -309,6 +347,10 @@ export interface RotationComparisonResult {
   keyRisks: string[];
   evidence: EvidenceReference[];
   unknowns: string[];
+  suitabilityStatus?: SuitabilityStatus;
+  recommendation?: RecommendationExplanation;
+  criticalLimitations?: string[];
+  manageableRisks?: AgronomicRisk[];
 }
 
 // ==========================================

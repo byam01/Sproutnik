@@ -9,6 +9,7 @@ import {
   ClimateIndicators,
   createKnownField,
   createUnknownField,
+  DataProvenanceMeta,
   FarmerProfile,
   IrrigationSourceType,
   Location,
@@ -33,6 +34,7 @@ export interface RotationsApiResponseData {
   farmerProfile?: FarmerProfile;
   baseline: RotationComparisonResult;
   alternatives: RotationComparisonResult[];
+  provenance: DataProvenanceMeta;
   scientificDisclaimer: string;
 }
 
@@ -93,8 +95,10 @@ export async function GET(
   const startYear = searchParams.get("startYear") ? parseInt(searchParams.get("startYear")!, 10) : 2015;
   const endYear = searchParams.get("endYear") ? parseInt(searchParams.get("endYear")!, 10) : 2024;
 
-  const soilTexture = (searchParams.get("soilTexture") as SoilTextureType) || undefined;
-  const irrigationSource = (searchParams.get("irrigationSource") as IrrigationSourceType) || "tubewell_deep";
+  const rawSoilTexture = searchParams.get("soilTexture");
+  const rawIrrigationSource = searchParams.get("irrigationSource");
+  const soilTexture = (rawSoilTexture as SoilTextureType) || undefined;
+  const irrigationSource = (rawIrrigationSource as IrrigationSourceType) || undefined;
   const groundwaterDepthMeters = searchParams.get("groundwaterDepth")
     ? parseFloat(searchParams.get("groundwaterDepth")!)
     : null;
@@ -109,7 +113,7 @@ export async function GET(
   };
 
   const farmerContext: RotationFarmerContext = {
-    soilTexture: soilTexture || "loam",
+    soilTexture,
     irrigationSource,
     groundwaterDepthMeters: groundwaterDepthMeters ?? undefined,
   };
@@ -126,8 +130,10 @@ export async function GET(
     }),
     landAreaHectares: createUnknownField(),
     soilTexture: soilTexture ? createKnownField(soilTexture) : createUnknownField(),
-    irrigationAvailable: createKnownField(irrigationSource !== "rainfed_only"),
-    irrigationSource: createKnownField(irrigationSource),
+    irrigationAvailable: irrigationSource
+      ? createKnownField(irrigationSource !== "rainfed_only")
+      : createUnknownField(),
+    irrigationSource: irrigationSource ? createKnownField(irrigationSource) : createUnknownField(),
     currentCrops: createUnknownField(),
     farmingGoals: createUnknownField(),
     createdAt: now,
@@ -181,6 +187,29 @@ export async function GET(
     evaluatedRotations.find((r) => r.isBaseline) || evaluatedRotations[0];
   const alternatives = evaluatedRotations.filter((r) => !r.isBaseline);
 
+  const provenance: DataProvenanceMeta = {
+    climateDataSource: isMock
+      ? "Calibrated Agroclimatology Fixture (Ludhiana baseline)"
+      : "NASA POWER Agroclimatology (CERES/MERRA-2 API)",
+    isMock,
+    climateObservationPeriod: `${startYear}–${endYear}`,
+    agronomicEvidenceSources: [
+      "Punjab Agricultural University (PAU) Package of Practices for Kharif & Rabi Crops",
+      "PAU Guidelines for Direct Seeded Rice (DSR) & Maize Diversification",
+      "Central Ground Water Board (CGWB) Punjab Ground Water Year Book",
+      "ICAR-IIFSR Long-term Cropping Systems Research Benchmarks",
+    ],
+    modelingNotice:
+      "Crop water requirement (ETc), irrigation deficit, and turnaround interval calculations are agronomic simulation models derived from PAU field benchmarks and Penman-Monteith approximations, not in-situ soil moisture or sap-flow sensor telemetry.",
+    farmerContextApplied: {
+      soilTexture: soilTexture || "loam (default assumption)",
+      isSoilTextureReported: Boolean(soilTexture),
+      irrigationSource: irrigationSource || "tubewell_deep (default assumption)",
+      isIrrigationSourceReported: Boolean(irrigationSource),
+      groundwaterDepthMeters: groundwaterDepthMeters ?? undefined,
+    },
+  };
+
   return NextResponse.json({
     success: true,
     data: {
@@ -197,6 +226,7 @@ export async function GET(
       farmerProfile,
       baseline,
       alternatives,
+      provenance,
       scientificDisclaimer: SCIENTIFIC_DISCLAIMER,
     },
     meta: {

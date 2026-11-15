@@ -47,6 +47,7 @@ export function evaluateRotationFeasibility(
     }
   }
 
+  const minGap = Math.min(...rotation.turnaroundDays);
   criteria.push({
     code: "CALENDAR_TURNAROUND",
     name: "Crop Calendar & Turnaround Feasibility",
@@ -54,8 +55,8 @@ export function evaluateRotationFeasibility(
     explanation: hasTurnaroundFailure
       ? "One or more crop transitions have overlapping or unviable turnaround windows (< 7 days)."
       : hasTightTurnaround
-      ? "Turnaround windows are feasible but require rapid mechanization between harvest and subsequent sowing."
-      : "Adequate turnaround interval available between all crop phases for soil preparation.",
+      ? `Turnaround windows are feasible (minimum ${minGap} days) but require rapid mechanization between harvest and subsequent sowing.`
+      : `Adequate turnaround interval available between all crop phases for soil preparation (minimum gap: ${minGap} days).`,
     evidenceRefId: "PROVISIONAL_TURNAROUND_WINDOW",
   });
 
@@ -75,13 +76,34 @@ export function evaluateRotationFeasibility(
       const reason = `Rotation requires estimated ~${totalEstimatedWaterMm} mm irrigation, which cannot be sustained under rainfed-only conditions in Punjab (historical mean annual rain is ~680 mm).`;
       rejectionReasons.push(reason);
       irrigationExplanation = reason;
+    } else {
+      irrigationExplanation = `Low water footprint (~${totalEstimatedWaterMm} mm) can be supported under rainfed conditions with in situ moisture conservation.`;
     }
   } else if (farmerContext?.irrigationSource === "tubewell_shallow") {
     if (hasPuddleRice && (farmerContext.groundwaterDepthMeters ?? 0) > 20) {
       warnings.push(
         "Shallow tubewells risk discharge failure during peak June–July paddy transplantation when local water table drops below centrifugal suction limits."
       );
+      irrigationExplanation =
+        "Shallow tubewell may experience suction lift limits during peak May–June transplanting due to deep water table (>20 m).";
+    } else {
+      irrigationExplanation = "Shallow tubewell capacity matches crop water stages adequately.";
     }
+  } else if (farmerContext?.irrigationSource === "canal") {
+    if (hasPuddleRice) {
+      warnings.push(
+        "Puddled rice on rotational canal supply (warabandi) requires farm pond or supplemental tubewell during peak nursery establishment."
+      );
+    }
+    irrigationExplanation =
+      "Canal irrigation aligns well with seasonal water demands; rotational turns (warabandi) should be timed with critical crop growth stages.";
+  } else if (farmerContext?.irrigationSource === "tubewell_deep") {
+    irrigationExplanation = `Deep tubewell irrigation provides assured volume (~${totalEstimatedWaterMm} mm/year) across all crop stages.`;
+  } else if (farmerContext?.irrigationSource === "conjunctive") {
+    irrigationExplanation =
+      "Conjunctive use of canal and tubewell water provides flexible irrigation while buffering against salinity buildup.";
+  } else if (!farmerContext?.irrigationSource) {
+    warnings.push("Irrigation source not specified by farmer; evaluated under standard central Punjab deep tubewell assumptions.");
   }
 
   criteria.push({
@@ -122,6 +144,22 @@ export function evaluateRotationFeasibility(
       warnings.push(
         "Kharif maize on clay loam soil requires ridge planting and adequate surface drainage to prevent waterlogging during monsoon downpours."
       );
+      if (soilPassed) {
+        soilExplanation =
+          "Clay loam is highly moisture-retentive; maize requires ridge sowing or surface furrows to prevent temporary root hypoxia during heavy monsoon showers.";
+      }
+    } else if (soil === "sandy_loam" && soilPassed) {
+      soilExplanation =
+        "Sandy loam is well-aerated with good permeability, ideal for root development of cereals, pulses, and oilseeds in this sequence.";
+    } else if (soil === "loam" && soilPassed) {
+      soilExplanation =
+        "Loam provides balanced water retention and aeration, optimal for all crops across kharif, rabi, and summer seasons.";
+    } else if (soil === "silt_loam" && soilPassed) {
+      soilExplanation =
+        "Silt loam offers high available water holding capacity; monitor soil crusting after post-sowing showers.";
+    } else if (soil === "sandy" && soilPassed && !hasDsr) {
+      warnings.push("Sandy soil has high percolation; split nitrogen fertilizer into 3–4 applications to minimize leaching.");
+      soilExplanation = "Coarse sandy soil supports sequence but requires split nutrient and moisture applications.";
     }
   } else {
     warnings.push("Soil texture not specified by farmer; evaluated under standard loam baseline assumptions.");
