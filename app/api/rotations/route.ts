@@ -95,8 +95,10 @@ export async function GET(
   const startYear = searchParams.get("startYear") ? parseInt(searchParams.get("startYear")!, 10) : 2015;
   const endYear = searchParams.get("endYear") ? parseInt(searchParams.get("endYear")!, 10) : 2024;
 
-  const soilTexture = (searchParams.get("soilTexture") as SoilTextureType) || undefined;
-  const irrigationSource = (searchParams.get("irrigationSource") as IrrigationSourceType) || "tubewell_deep";
+  const rawSoilTexture = searchParams.get("soilTexture");
+  const rawIrrigationSource = searchParams.get("irrigationSource");
+  const soilTexture = (rawSoilTexture as SoilTextureType) || undefined;
+  const irrigationSource = (rawIrrigationSource as IrrigationSourceType) || undefined;
   const groundwaterDepthMeters = searchParams.get("groundwaterDepth")
     ? parseFloat(searchParams.get("groundwaterDepth")!)
     : null;
@@ -111,7 +113,7 @@ export async function GET(
   };
 
   const farmerContext: RotationFarmerContext = {
-    soilTexture: soilTexture || "loam",
+    soilTexture,
     irrigationSource,
     groundwaterDepthMeters: groundwaterDepthMeters ?? undefined,
   };
@@ -128,8 +130,10 @@ export async function GET(
     }),
     landAreaHectares: createUnknownField(),
     soilTexture: soilTexture ? createKnownField(soilTexture) : createUnknownField(),
-    irrigationAvailable: createKnownField(irrigationSource !== "rainfed_only"),
-    irrigationSource: createKnownField(irrigationSource),
+    irrigationAvailable: irrigationSource
+      ? createKnownField(irrigationSource !== "rainfed_only")
+      : createUnknownField(),
+    irrigationSource: irrigationSource ? createKnownField(irrigationSource) : createUnknownField(),
     currentCrops: createUnknownField(),
     farmingGoals: createUnknownField(),
     createdAt: now,

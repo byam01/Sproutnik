@@ -21,6 +21,7 @@ interface FarmerProfileBannerProps {
 export function FarmerProfileBanner({
   profile,
   profileId,
+  onClearProfile,
 }: FarmerProfileBannerProps) {
   if (!profile) {
     return (
@@ -33,15 +34,15 @@ export function FarmerProfileBanner({
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                  Demonstration Mode Active — Prototype Reference Dataset
+                  DEMONSTRATION DATA — Central Punjab (Ludhiana Rice–Wheat Zone)
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300">
-                  Unpersonalized
+                  Demo Mode
                 </span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed max-w-3xl">
                 Currently displaying historical baseline data for Central Punjab (Ludhiana Rice–Wheat zone).
-                Complete farmer onboarding to tailor crop rotation feasibility, water exposure, and agronomic tradeoffs to your farm.
+                Configure your own farm profile to tailor crop rotation feasibility, water exposure, and agronomic tradeoffs to your farm.
               </p>
             </div>
           </div>
@@ -51,7 +52,7 @@ export function FarmerProfileBanner({
             className="shrink-0 px-4 py-2 bg-forest-700 hover:bg-forest-800 active:bg-forest-900 text-white text-xs font-semibold rounded-xl shadow-sm transition-all flex items-center gap-1.5"
           >
             <SproutIcon size={15} />
-            Start Farmer Onboarding →
+            Configure My Farm →
           </Link>
         </div>
       </div>
@@ -139,12 +140,29 @@ export function FarmerProfileBanner({
           </div>
         </div>
 
-        <Link
-          href="/onboarding"
-          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition-colors flex items-center gap-1.5 self-start sm:self-auto"
-        >
-          <span>{providedCount === 4 ? "Edit Farm Details →" : "Complete Farm Setup →"}</span>
-        </Link>
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {onClearProfile && (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("Are you sure you want to reset your saved farm profile? This will revert the dashboard to demonstration mode.")) {
+                  onClearProfile();
+                }
+              }}
+              className="px-2.5 py-1.5 bg-white hover:bg-rose-50 active:bg-rose-100 text-rose-700 hover:text-rose-800 text-xs font-medium rounded-xl border border-rose-200 transition-colors"
+              title="Reset saved profile and return to demonstration mode"
+            >
+              Reset Profile
+            </button>
+          )}
+
+          <Link
+            href="/onboarding"
+            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition-colors flex items-center gap-1.5"
+          >
+            <span>{providedCount === 4 ? "Edit Farm Details →" : "Complete Farm Setup →"}</span>
+          </Link>
+        </div>
       </div>
 
       {/* Grid of Farmer Details */}

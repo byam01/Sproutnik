@@ -44,13 +44,21 @@ export function UnifiedWelcomeScreen({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onReturnToDashboard}
-          className="text-xs font-semibold text-stone-600 hover:text-stone-900 bg-white hover:bg-stone-50 px-3.5 py-2 rounded-xl transition-colors border border-stone-200 shadow-2xs self-start sm:self-auto"
-        >
-          ← Return to dashboard
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <a
+            href="/"
+            className="text-xs font-semibold text-stone-600 hover:text-stone-900 bg-white hover:bg-stone-50 px-3.5 py-2 rounded-xl transition-colors border border-stone-200 shadow-2xs"
+          >
+            ← Home
+          </a>
+          <button
+            type="button"
+            onClick={onReturnToDashboard}
+            className="text-xs font-semibold text-stone-600 hover:text-stone-900 bg-white hover:bg-stone-50 px-3.5 py-2 rounded-xl transition-colors border border-stone-200 shadow-2xs"
+          >
+            Go to dashboard →
+          </button>
+        </div>
       </div>
 
       {/* Hero Headline Section matching home.png / locationpng.png */}

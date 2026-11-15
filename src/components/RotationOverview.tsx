@@ -113,6 +113,63 @@ export function RotationOverview({
   const [selectedAltId, setSelectedAltId] = useState<string | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [advisoryReport, setAdvisoryReport] = useState<FarmerAdvisoryReportData | null>(null);
+  const [comparisonMode, setComparisonMode] = useState<"baseline" | "head_to_head">("baseline");
+  const [candidateAId, setCandidateAId] = useState<string>("rotation_maize_wheat");
+  const [candidateBId, setCandidateBId] = useState<string>("rotation_dsr_wheat");
+
+  const effectiveBaseline = recalculatedRotations?.baseline || rotationsData?.baseline;
+  const effectiveAlternatives = recalculatedRotations?.alternatives || rotationsData?.alternatives || [];
+  const isScenarioActive = recalculatedRotations?.isScenarioActive ?? false;
+
+  const allCandidates: RecalculatedRotation[] = useMemo(() => {
+    if (!effectiveBaseline && effectiveAlternatives.length === 0) return [];
+    const rawList = effectiveBaseline
+      ? [effectiveBaseline, ...effectiveAlternatives]
+      : effectiveAlternatives;
+
+    return rawList.map((item) => {
+      if ("changeStatus" in item && "isScenarioActive" in item) {
+        return item as RecalculatedRotation;
+      }
+      return {
+        ...item,
+        isScenarioActive,
+        changeStatus: "unchanged" as const,
+      };
+    });
+  }, [effectiveBaseline, effectiveAlternatives, isScenarioActive]);
+
+  const candidateA = useMemo(
+    () => allCandidates.find((c) => c.rotationId === candidateAId) || allCandidates[0],
+    [allCandidates, candidateAId]
+  );
+  const candidateB = useMemo(
+    () => allCandidates.find((c) => c.rotationId === candidateBId) || allCandidates[1] || allCandidates[0],
+    [allCandidates, candidateBId]
+  );
+
+  const selectedAlt =
+    effectiveAlternatives.find((item) => item.rotationId === selectedAltId) ||
+    effectiveAlternatives[0];
+
+  const activeUnknowns = useMemo(() => {
+    if (comparisonMode === "head_to_head" && candidateA && candidateB) {
+      const set = new Set([...candidateA.unknowns, ...candidateB.unknowns]);
+      return Array.from(set);
+    }
+    return selectedAlt?.unknowns || [];
+  }, [comparisonMode, candidateA, candidateB, selectedAlt]);
+
+  const activeEvidence = useMemo(() => {
+    if (comparisonMode === "head_to_head" && candidateA && candidateB) {
+      const map = new Map();
+      [...candidateA.evidence, ...candidateB.evidence].forEach((e) => {
+        if (!map.has(e.id)) map.set(e.id, e);
+      });
+      return Array.from(map.values());
+    }
+    return selectedAlt?.evidence || [];
+  }, [comparisonMode, candidateA, candidateB, selectedAlt]);
 
   if (loading && !rotationsData) {
     return (
@@ -154,44 +211,6 @@ export function RotationOverview({
     );
   }
 
-  const effectiveBaseline = recalculatedRotations?.baseline || rotationsData.baseline;
-  const effectiveAlternatives = recalculatedRotations?.alternatives || rotationsData.alternatives;
-  const isScenarioActive = recalculatedRotations?.isScenarioActive ?? false;
-
-  const [comparisonMode, setComparisonMode] = useState<"baseline" | "head_to_head">("baseline");
-  const [candidateAId, setCandidateAId] = useState<string>("rotation_maize_wheat");
-  const [candidateBId, setCandidateBId] = useState<string>("rotation_dsr_wheat");
-
-  const allCandidates: RecalculatedRotation[] = useMemo(() => {
-    const rawList = effectiveBaseline
-      ? [effectiveBaseline, ...effectiveAlternatives]
-      : effectiveAlternatives;
-
-    return rawList.map((item) => {
-      if ("changeStatus" in item && "isScenarioActive" in item) {
-        return item as RecalculatedRotation;
-      }
-      return {
-        ...item,
-        isScenarioActive,
-        changeStatus: "unchanged" as const,
-      };
-    });
-  }, [effectiveBaseline, effectiveAlternatives, isScenarioActive]);
-
-  const candidateA = useMemo(
-    () => allCandidates.find((c) => c.rotationId === candidateAId) || allCandidates[0],
-    [allCandidates, candidateAId]
-  );
-  const candidateB = useMemo(
-    () => allCandidates.find((c) => c.rotationId === candidateBId) || allCandidates[1] || allCandidates[0],
-    [allCandidates, candidateBId]
-  );
-
-  const selectedAlt =
-    effectiveAlternatives.find((item) => item.rotationId === selectedAltId) ||
-    effectiveAlternatives[0];
-
   const selectedDef = CANDIDATE_ROTATIONS.find(
     (r) => r.id === selectedAlt?.rotationId
   );
@@ -208,25 +227,6 @@ export function RotationOverview({
   const passedChecks =
     feasibility?.criteria.filter((c) => c.passed).length ?? 0;
   const totalChecks = feasibility?.criteria.length ?? 0;
-
-  const activeUnknowns = useMemo(() => {
-    if (comparisonMode === "head_to_head" && candidateA && candidateB) {
-      const set = new Set([...candidateA.unknowns, ...candidateB.unknowns]);
-      return Array.from(set);
-    }
-    return selectedAlt?.unknowns || [];
-  }, [comparisonMode, candidateA, candidateB, selectedAlt]);
-
-  const activeEvidence = useMemo(() => {
-    if (comparisonMode === "head_to_head" && candidateA && candidateB) {
-      const map = new Map();
-      [...candidateA.evidence, ...candidateB.evidence].forEach((e) => {
-        if (!map.has(e.id)) map.set(e.id, e);
-      });
-      return Array.from(map.values());
-    }
-    return selectedAlt?.evidence || [];
-  }, [comparisonMode, candidateA, candidateB, selectedAlt]);
 
   const handleOpenReport = () => {
     if (!rotationsData) return;

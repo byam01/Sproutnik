@@ -300,7 +300,7 @@ export function OnboardingHarness() {
   }, [onboardingState]);
 
   const handleReturnToDashboard = () => {
-    router.push("/");
+    router.push("/dashboard");
   };
 
   // Completion lifecycle with real API contract connection
@@ -328,7 +328,7 @@ export function OnboardingHarness() {
             // Clear pending draft ONLY after successful cloud confirmation
             clearOnboardingDraft();
             setSyncStatus("saved_remote");
-            router.push("/");
+            router.push("/dashboard");
           } else {
             setSyncStatus("error");
             setSyncErrorMessage("Remote profile response was missing profileId.");
@@ -363,7 +363,7 @@ export function OnboardingHarness() {
           saveStoredProfile(profileId, updatedProfile);
           clearOnboardingDraft();
           setSyncStatus("saved_remote");
-          router.push("/");
+          router.push("/dashboard");
         } else if (res.error?.code === "PROFILE_NOT_FOUND" || res.error?.code === "HTTP_404") {
           // Stale profile ID after server restart: recover transparently by creating new profile
           const createRes = await createFarmerProfile(backendProfile);
@@ -378,7 +378,7 @@ export function OnboardingHarness() {
             saveStoredProfile(newId, remoteProfile);
             clearOnboardingDraft();
             setSyncStatus("saved_remote");
-            router.push("/");
+            router.push("/dashboard");
           } else {
             saveStoredProfile(profileId, backendProfile);
             setSyncStatus("saved_local");
