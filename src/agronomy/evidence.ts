@@ -72,12 +72,12 @@ export const AGRONOMIC_EVIDENCE: Record<string, EvidenceReference> = {
   CGWB_LUDHIANA_GROUNDWATER: {
     id: "CGWB_LUDHIANA_GROUNDWATER",
     source: "Central Ground Water Board (CGWB), Ministry of Jal Shakti, Government of India",
-    title: "Dynamic Ground Water Resources of Punjab State: Ludhiana District Assessment",
+    title: "Dynamic Ground Water Resources of Punjab State (2023 Assessment)",
     year: 2023,
     url: "http://cgwb.gov.in",
     isProvisional: false,
     notes:
-      "Stage of groundwater extraction in Ludhiana district exceeds 150%, categorized as 'Over-Exploited'. Water table decline rates in blocks like Ludhiana and Khanna exceed 0.5–0.8 m/year.",
+      "State-wide Stage of Ground Water Extraction (SOE) is 164%, with over 76% of assessment units classified as 'Over-Exploited'. In central Punjab districts (including Ludhiana, Sangrur, Patiala, and Jalandhar), SOE exceeds 150–200% primarily driven by intensive tubewell-irrigated paddy monoculture.",
   },
   ICAR_IIFSR_DIVERSIFICATION: {
     id: "ICAR_IIFSR_DIVERSIFICATION",

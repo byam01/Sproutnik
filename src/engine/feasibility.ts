@@ -82,6 +82,12 @@ export function evaluateRotationFeasibility(
         "Shallow tubewells risk discharge failure during peak June–July paddy transplantation when local water table drops below centrifugal suction limits."
       );
     }
+  } else if (!farmerContext?.irrigationSource) {
+    warnings.push(
+      "Irrigation source not specified; evaluated under standard regional assured irrigation assumptions (tubewell/canal)."
+    );
+    irrigationExplanation =
+      "Evaluated under standard regional assured irrigation assumptions (tubewell/canal).";
   }
 
   criteria.push({

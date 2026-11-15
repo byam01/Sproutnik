@@ -22,34 +22,28 @@ interface SidebarProps {
 export function Sidebar({
   isMock,
   onToggleMock,
-  activeSection = "overview",
+  activeSection = "crop-rotations",
   onSelectSection,
 }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = [
     {
-      id: "overview",
-      label: "Overview",
-      description: "Key climate metrics & status",
-      icon: ActivityIcon,
-    },
-    {
-      id: "climate-insights",
-      label: "Climate Insights",
-      description: "Rainfall & thermal trends",
-      icon: BarChartIcon,
-    },
-    {
       id: "crop-rotations",
-      label: "Crop Rotations",
-      description: "Rice–Wheat baseline & risks",
+      label: "Crop Rotations & Advisory",
+      description: "Feasibility, water savings & trade-offs",
       icon: SproutIcon,
     },
     {
+      id: "climate-insights",
+      label: "Climate Risk & Trends",
+      description: "Rainfall, thermal stress & monsoon",
+      icon: BarChartIcon,
+    },
+    {
       id: "data-sources",
-      label: "About & Data Sources",
-      description: "NASA POWER attribution & audit",
+      label: "Evidence & Methodology",
+      description: "PAU trials & NASA POWER audit",
       icon: DatabaseIcon,
     },
   ];
@@ -167,13 +161,13 @@ export function Sidebar({
               </div>
               <div className="leading-tight">
                 <div className="text-xs font-bold flex items-center gap-1.5">
-                  Farmer Onboarding
-                  <span className="text-[9px] bg-forest-200 text-forest-900 px-1 py-0.2 rounded font-mono">
-                    NEW
+                  Farm Profile &amp; Setup
+                  <span className="text-[9px] bg-forest-200 text-forest-900 px-1.5 py-0.2 rounded font-mono font-semibold">
+                    PROFILE
                   </span>
                 </div>
                 <div className="text-[10px] text-forest-700">
-                  Compare 3 prototype flows
+                  Configure district, soil &amp; irrigation
                 </div>
               </div>
             </a>
@@ -186,14 +180,14 @@ export function Sidebar({
                   type="button"
                   onClick={() => handleNavClick(item.id)}
                   className={`w-full text-left px-3 py-2.5 rounded-xl transition-all flex items-center gap-3 group ${isActive
-                      ? "bg-forest-50 text-forest-900 font-semibold border border-forest-200/80"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-forest-50 text-forest-900 font-semibold border border-forest-200/80"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                     }`}
                 >
                   <div
                     className={`p-1.5 rounded-lg transition-colors ${isActive
-                        ? "bg-forest-600 text-white"
-                        : "text-slate-500 group-hover:text-forest-700"
+                      ? "bg-forest-600 text-white"
+                      : "text-slate-500 group-hover:text-forest-700"
                       }`}
                   >
                     <Icon size={16} />
@@ -218,8 +212,8 @@ export function Sidebar({
               <span className="font-semibold text-slate-700">Data Feed</span>
               <span
                 className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${isMock
-                    ? "bg-amber-100 text-amber-800"
-                    : "bg-forest-100 text-forest-800"
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-forest-100 text-forest-800"
                   }`}
               >
                 {isMock ? "Demo Mock" : "NASA Live"}

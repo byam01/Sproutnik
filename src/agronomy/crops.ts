@@ -24,7 +24,7 @@ export const CROPS_PUNJAB: Record<string, CropMetadata> = {
       "High tolerance to temporary water stagnation during monsoon surges",
     ],
     limitations: [
-      "Extremely high groundwater draft (~1,500–2,000 mm total water requirement)",
+      "Extremely high seasonal irrigation application (~1,500–2,000 mm water requirement under conventional flooding), driving heavy tubewell draft in non-canal areas",
       "Continuous puddling destroys soil physical structure, forming an impermeable subsoil hardpan",
       "Late harvest in late October/early November creates a severe 10–20 day bottleneck before wheat sowing, historically incentivizing stubble burning",
       "Contributes to regional aquifer depletion in central Punjab over-exploited blocks",
@@ -117,7 +117,7 @@ export const CROPS_PUNJAB: Record<string, CropMetadata> = {
     salinityTolerance: "moderately_sensitive",
     precedingCropCompatibility: ["bread_wheat", "rabi_mustard", "summer_moong"],
     benefits: [
-      "Consumes 65–70% less irrigation water than puddled paddy, halting groundwater drawdown",
+      "Consumes 65–70% less irrigation water than puddled paddy (~500 mm vs ~1,750 mm), substantially mitigating local tubewell extraction burden",
       "Matures in late September, providing a wide 25–40 day window for optimal wheat sowing",
       "Disrupts aquatic weed and insect pest cycles of continuous rice",
       "Deep fibrous root system improves soil aeration without puddling",

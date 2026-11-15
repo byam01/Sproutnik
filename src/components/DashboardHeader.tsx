@@ -57,8 +57,8 @@ export function DashboardHeader({
             href="/onboarding"
             className="px-3 py-1.5 bg-forest-50 hover:bg-forest-100 active:bg-forest-200 text-forest-800 border border-forest-200 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 shadow-2xs"
           >
-            <span className="w-2 h-2 rounded-full bg-forest-600 animate-pulse" />
-            Farmer Onboarding (Prototypes) →
+            <span className="w-2 h-2 rounded-full bg-forest-600" />
+            Farm Setup &amp; Constraints →
           </a>
 
           {/* Mock / Live Toggle */}

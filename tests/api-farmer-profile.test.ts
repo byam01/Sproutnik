@@ -4,6 +4,7 @@ import { POST } from "../app/api/farmer-profile/route";
 import { GET as getById, PATCH } from "../app/api/farmer-profile/[profileId]/route";
 import { farmerProfileStore } from "../src/server/farmerProfileStore";
 import { createKnownField, createUnknownField, FarmerProfile, isKnownField } from "../src/types";
+import { INITIAL_ONBOARDING_STATE, mapOnboardingToFarmerProfile } from "../src/types/onboarding";
 
 describe("Farmer Profile API Routes", () => {
   beforeEach(() => {
@@ -89,6 +90,65 @@ describe("Farmer Profile API Routes", () => {
       expect(farmerProfileStore.getById("client_spoofed_uuid_12345")).toBeNull();
       // Server ID does exist
       expect(farmerProfileStore.getById(json.data.profileId)).not.toBeNull();
+    });
+
+    it("accepts an unassigned client profile with profileId: '' without validation error", async () => {
+      const clientPayloadWithEmptyId = {
+        ...validProfileInput,
+        profileId: "",
+      };
+      const req = new NextRequest("http://localhost:3000/api/farmer-profile", {
+        method: "POST",
+        body: JSON.stringify(clientPayloadWithEmptyId),
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.data.profileId).toBeDefined();
+      expect(json.data.profileId).not.toBe("");
+      expect(json.data.profile).toBeDefined();
+      expect(json.data.profile.profileId).toBe(json.data.profileId);
+    });
+
+    it("successfully creates a profile from mapOnboardingToFarmerProfile(INITIAL_ONBOARDING_STATE)", async () => {
+      const { backendProfile } = mapOnboardingToFarmerProfile(INITIAL_ONBOARDING_STATE);
+      const req = new NextRequest("http://localhost:3000/api/farmer-profile", {
+        method: "POST",
+        body: JSON.stringify(backendProfile),
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.data.profileId).toBeDefined();
+      expect(json.data.profile).toBeDefined();
+    });
+
+    it("normalizes string numbers, soil aliases, and irrigation aliases on creation", async () => {
+      const aliasedPayload = {
+        ...validProfileInput,
+        landAreaHectares: createKnownField("3.2" as any),
+        soilTexture: createKnownField("Sandy-Loam" as any),
+        irrigationSource: createKnownField("deep_tubewell" as any),
+      };
+      const req = new NextRequest("http://localhost:3000/api/farmer-profile", {
+        method: "POST",
+        body: JSON.stringify(aliasedPayload),
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      if (isKnownField(json.data.landAreaHectares)) {
+        expect(json.data.landAreaHectares.value).toBe(3.2);
+      }
+      if (isKnownField(json.data.soilTexture)) {
+        expect(json.data.soilTexture.value).toBe("sandy_loam");
+      }
+      if (isKnownField(json.data.irrigationSource)) {
+        expect(json.data.irrigationSource.value).toBe("tubewell_deep");
+      }
     });
 
     it("rejects invalid profile inputs with HTTP 400", async () => {
@@ -268,6 +328,33 @@ describe("Farmer Profile API Routes", () => {
 
       // updatedAt refreshed
       expect(json.data.updatedAt).not.toBe(initialUpdatedAt);
+    });
+
+    it("normalizes soil and irrigation aliases on patch update", async () => {
+      const updatePayload = {
+        soilTexture: createKnownField("clay-loam" as any),
+        irrigationSource: createKnownField("canal + tubewell" as any),
+      };
+
+      const req = new NextRequest(`http://localhost:3000/api/farmer-profile/${seededId}`, {
+        method: "PATCH",
+        body: JSON.stringify(updatePayload),
+      });
+
+      const res = await PATCH(req, {
+        params: Promise.resolve({ profileId: seededId }),
+      });
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+
+      if (isKnownField(json.data.soilTexture)) {
+        expect(json.data.soilTexture.value).toBe("clay_loam");
+      }
+      if (isKnownField(json.data.irrigationSource)) {
+        expect(json.data.irrigationSource.value).toBe("conjunctive");
+      }
     });
 
     it("rejects attempt to mutate profileId or createdAt in update (immutable fields)", async () => {

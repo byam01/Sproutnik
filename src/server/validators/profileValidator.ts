@@ -79,6 +79,177 @@ function isValidIsoDate(str: string): boolean {
   return !isNaN(timestamp);
 }
 
+// ==========================================
+// Input Normalization Helpers
+// ==========================================
+
+/**
+ * Normalizes user/client soil texture strings into canonical SoilTextureType or original string.
+ * Supports hyphens, spaces, uppercase, and common aliases (e.g. "sandy-loam", "Sandy Loam" -> "sandy_loam").
+ */
+export function normalizeSoilTexture(val: unknown): string {
+  if (typeof val !== "string") return val as string;
+  const s = val.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (s === "sand") return "sandy";
+  if (s === "sandyloam") return "sandy_loam";
+  if (s === "clayloam") return "clay_loam";
+  if (s === "siltloam") return "silt_loam";
+  return s;
+}
+
+/**
+ * Normalizes user/client irrigation source strings into canonical IrrigationSourceType or original string.
+ * Handles inverted naming and common aliases (e.g. "deep_tubewell" -> "tubewell_deep", "canal_water" -> "canal").
+ */
+export function normalizeIrrigationSource(val: unknown): string {
+  if (typeof val !== "string") return val as string;
+  const s = val.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (s === "deep_tubewell" || s === "deep_borewell" || s === "tubewell_deep" || s === "borewell_deep") {
+    return "tubewell_deep";
+  }
+  if (s === "shallow_tubewell" || s === "shallow_borewell" || s === "tubewell_shallow" || s === "borewell_shallow") {
+    return "tubewell_shallow";
+  }
+  if (s === "canal" || s === "canal_water") {
+    return "canal";
+  }
+  if (s === "rainfed" || s === "rain_fed" || s === "rainfed_only" || s === "rain") {
+    return "rainfed_only";
+  }
+  if (
+    s === "conjunctive" ||
+    (s.includes("canal") && (s.includes("tubewell") || s.includes("borewell"))) ||
+    s === "both" ||
+    s === "mixed"
+  ) {
+    return "conjunctive";
+  }
+  return s;
+}
+
+/**
+ * Coerces valid numeric strings to finite positive numbers for landAreaHectares.
+ */
+export function normalizeLandArea(val: unknown): number | unknown {
+  if (typeof val === "number") return val;
+  if (typeof val === "string" && val.trim() !== "") {
+    const parsed = Number(val.trim());
+    if (Number.isFinite(parsed) && !isNaN(parsed)) {
+      return parsed;
+    }
+  }
+  return val;
+}
+
+/**
+ * Coerces string booleans ("true", "false", "yes", "no", "1", "0") to booleans.
+ */
+export function normalizeBoolean(val: unknown): boolean | unknown {
+  if (typeof val === "boolean") return val;
+  if (typeof val === "string") {
+    const s = val.trim().toLowerCase();
+    if (s === "true" || s === "yes" || s === "1") return true;
+    if (s === "false" || s === "no" || s === "0") return false;
+  }
+  return val;
+}
+
+/**
+ * Normalizes location object fields (countryCode casing, coordinate string coercion).
+ */
+export function normalizeProfileLocation(val: unknown): unknown {
+  if (!val || typeof val !== "object" || Array.isArray(val)) return val;
+  const loc = { ...(val as Record<string, unknown>) };
+  if (typeof loc.countryCode === "string") {
+    loc.countryCode = loc.countryCode.trim().toUpperCase();
+  }
+  if (typeof loc.selectionMethod === "string") {
+    loc.selectionMethod = loc.selectionMethod.trim().toLowerCase();
+  }
+  if (typeof loc.latitude === "string" && (loc.latitude as string).trim() !== "") {
+    const parsed = Number((loc.latitude as string).trim());
+    if (Number.isFinite(parsed) && !isNaN(parsed)) {
+      loc.latitude = parsed;
+    }
+  }
+  if (typeof loc.longitude === "string" && (loc.longitude as string).trim() !== "") {
+    const parsed = Number((loc.longitude as string).trim());
+    if (Number.isFinite(parsed) && !isNaN(parsed)) {
+      loc.longitude = parsed;
+    }
+  }
+  return loc;
+}
+
+/**
+ * Normalizes all known ProfileFields in a FarmerProfile payload before validation and storage.
+ */
+export function normalizeFarmerProfilePayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const normalized = { ...payload };
+
+  // Strip empty/null placeholder profileId if present
+  if (normalized.profileId === "" || normalized.profileId === null) {
+    delete normalized.profileId;
+  }
+
+  // Normalize location
+  if (normalized.location && typeof normalized.location === "object" && !Array.isArray(normalized.location)) {
+    const locField = normalized.location as Record<string, unknown>;
+    if (locField.status === "known" && locField.value && typeof locField.value === "object") {
+      normalized.location = {
+        ...locField,
+        value: normalizeProfileLocation(locField.value),
+      };
+    }
+  }
+
+  // Normalize landAreaHectares
+  if (normalized.landAreaHectares && typeof normalized.landAreaHectares === "object" && !Array.isArray(normalized.landAreaHectares)) {
+    const areaField = normalized.landAreaHectares as Record<string, unknown>;
+    if (areaField.status === "known" && areaField.value !== undefined && areaField.value !== null) {
+      normalized.landAreaHectares = {
+        ...areaField,
+        value: normalizeLandArea(areaField.value),
+      };
+    }
+  }
+
+  // Normalize soilTexture
+  if (normalized.soilTexture && typeof normalized.soilTexture === "object" && !Array.isArray(normalized.soilTexture)) {
+    const soilField = normalized.soilTexture as Record<string, unknown>;
+    if (soilField.status === "known" && soilField.value !== undefined && soilField.value !== null) {
+      normalized.soilTexture = {
+        ...soilField,
+        value: normalizeSoilTexture(soilField.value),
+      };
+    }
+  }
+
+  // Normalize irrigationAvailable
+  if (normalized.irrigationAvailable && typeof normalized.irrigationAvailable === "object" && !Array.isArray(normalized.irrigationAvailable)) {
+    const irrField = normalized.irrigationAvailable as Record<string, unknown>;
+    if (irrField.status === "known" && irrField.value !== undefined && irrField.value !== null) {
+      normalized.irrigationAvailable = {
+        ...irrField,
+        value: normalizeBoolean(irrField.value),
+      };
+    }
+  }
+
+  // Normalize irrigationSource
+  if (normalized.irrigationSource && typeof normalized.irrigationSource === "object" && !Array.isArray(normalized.irrigationSource)) {
+    const srcField = normalized.irrigationSource as Record<string, unknown>;
+    if (srcField.status === "known" && srcField.value !== undefined && srcField.value !== null) {
+      normalized.irrigationSource = {
+        ...srcField,
+        value: normalizeIrrigationSource(srcField.value),
+      };
+    }
+  }
+
+  return normalized;
+}
+
 /**
  * Generic validator for any ProfileField<T> structure.
  */
@@ -181,7 +352,8 @@ export function validateLandAreaHectaresValue(val: unknown, path: string): Valid
  * Validates soilTexture value when status is "known".
  */
 export function validateSoilTextureValue(val: unknown, path: string): ValidationError[] {
-  if (typeof val !== "string" || !VALID_SOIL_TEXTURES.has(val as SoilTextureType)) {
+  const norm = typeof val === "string" ? normalizeSoilTexture(val) : val;
+  if (typeof norm !== "string" || !VALID_SOIL_TEXTURES.has(norm as SoilTextureType)) {
     return [
       {
         field: path,
@@ -206,7 +378,8 @@ export function validateIrrigationAvailableValue(val: unknown, path: string): Va
  * Validates irrigationSource value when status is "known".
  */
 export function validateIrrigationSourceValue(val: unknown, path: string): ValidationError[] {
-  if (typeof val !== "string" || !VALID_IRRIGATION_SOURCES.has(val as IrrigationSourceType)) {
+  const norm = typeof val === "string" ? normalizeIrrigationSource(val) : val;
+  if (typeof norm !== "string" || !VALID_IRRIGATION_SOURCES.has(norm as IrrigationSourceType)) {
     return [
       {
         field: path,
@@ -307,18 +480,20 @@ export function validateProfileLocationValue(val: unknown, path: string): Valida
     });
   }
 
-  if (loc.latitude !== undefined) {
-    if (typeof loc.latitude !== "number" || !Number.isFinite(loc.latitude) || loc.latitude < -90 || loc.latitude > 90) {
+  if (loc.latitude !== undefined && loc.latitude !== null) {
+    const lat = typeof loc.latitude === "string" ? Number((loc.latitude as string).trim()) : loc.latitude;
+    if (typeof lat !== "number" || !Number.isFinite(lat) || lat < -90 || lat > 90) {
       errors.push({ field: `${path}.latitude`, message: `Latitude must be a finite number between -90 and 90.` });
     }
   }
 
-  if (loc.longitude !== undefined) {
+  if (loc.longitude !== undefined && loc.longitude !== null) {
+    const lon = typeof loc.longitude === "string" ? Number((loc.longitude as string).trim()) : loc.longitude;
     if (
-      typeof loc.longitude !== "number" ||
-      !Number.isFinite(loc.longitude) ||
-      loc.longitude < -180 ||
-      loc.longitude > 180
+      typeof lon !== "number" ||
+      !Number.isFinite(lon) ||
+      lon < -180 ||
+      lon > 180
     ) {
       errors.push({ field: `${path}.longitude`, message: `Longitude must be a finite number between -180 and 180.` });
     }
@@ -342,8 +517,8 @@ export function validateFarmerProfileInput(input: unknown): ValidationResult {
 
   const p = input as Record<string, unknown>;
 
-  // If profileId is supplied in body, validate non-empty string format
-  if (p.profileId !== undefined) {
+  // If profileId is supplied in body, validate non-empty string format (empty/null allowed as unassigned placeholder)
+  if (p.profileId !== undefined && p.profileId !== null && p.profileId !== "") {
     if (typeof p.profileId !== "string" || p.profileId.trim() === "") {
       errors.push({ field: "profileId", message: "profileId, if provided, must be a non-empty string." });
     }
@@ -393,11 +568,11 @@ export function validateFarmerProfilePartialInput(input: unknown): ValidationRes
 
   const p = input as Record<string, unknown>;
 
-  // Reject immutable fields
-  if ("profileId" in p) {
+  // Reject immutable fields when attempting to mutate
+  if ("profileId" in p && p.profileId !== undefined && p.profileId !== null && p.profileId !== "") {
     errors.push({ field: "profileId", message: "profileId cannot be modified in an update." });
   }
-  if ("createdAt" in p) {
+  if ("createdAt" in p && p.createdAt !== undefined && p.createdAt !== null) {
     errors.push({ field: "createdAt", message: "createdAt cannot be modified in an update." });
   }
 

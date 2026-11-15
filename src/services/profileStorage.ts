@@ -233,10 +233,14 @@ export function loadStoredProfile(): StoredProfileEnvelope | null {
 }
 
 export function saveStoredProfile(profileId: string, profile: FarmerProfile): boolean {
+  const normalizedProfile: FarmerProfile = {
+    ...profile,
+    profileId,
+  };
   const envelope: StoredProfileEnvelope = {
     schemaVersion: 1,
     profileId,
-    profile,
+    profile: normalizedProfile,
     savedAt: new Date().toISOString(),
   };
   const res = writeProfileEnvelope(envelope);

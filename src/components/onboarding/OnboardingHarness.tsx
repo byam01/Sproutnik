@@ -242,16 +242,19 @@ export function OnboardingHarness() {
       // Sync latest from backend if available
       getFarmerProfile(stored.profileId)
         .then((res) => {
-          if (res.success && res.data) {
+          if (res.success) {
             const remoteTime = Date.parse(res.data.updatedAt ?? "");
             if (isNaN(draftTime) || remoteTime > draftTime) {
               hydrateFromProfile(res.data, stored.profileId);
               saveStoredProfile(stored.profileId, res.data);
               setSyncStatus("saved_remote");
             }
+          } else if (res.error.code === "PROFILE_NOT_FOUND" || res.error.code === "HTTP_404") {
+            // Ephemeral server state reset; local data is preserved and will re-sync on completion
+            setSyncStatus("saved_local");
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     } else if (stored && stored.profileId) {
       // Only stored finalized profile exists
       setProfileId(stored.profileId);
@@ -260,12 +263,14 @@ export function OnboardingHarness() {
 
       getFarmerProfile(stored.profileId)
         .then((res) => {
-          if (res.success && res.data) {
+          if (res.success) {
             hydrateFromProfile(res.data, stored.profileId);
             saveStoredProfile(stored.profileId, res.data);
+          } else if (res.error.code === "PROFILE_NOT_FOUND" || res.error.code === "HTTP_404") {
+            setSyncStatus("saved_local");
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     } else if (draft) {
       // Only pending local draft exists (unauthenticated / offline onboarding)
       hydrateFromDraft(draft.draft, draft.rawState);
@@ -311,9 +316,13 @@ export function OnboardingHarness() {
         // Initial creation via POST /api/farmer-profile
         const res = await createFarmerProfile(backendProfile);
         if (res.success) {
-          if (res.data?.profileId) {
-            const newId = res.data.profileId;
-            const remoteProfile = res.data.profile ?? backendProfile;
+          const newId = res.data?.profileId;
+          if (newId) {
+            const remoteProfile: FarmerProfile = res.data?.profile ?? {
+              ...backendProfile,
+              ...res.data,
+              profileId: newId,
+            };
             setProfileId(newId);
             saveStoredProfile(newId, remoteProfile);
             // Clear pending draft ONLY after successful cloud confirmation
@@ -334,18 +343,49 @@ export function OnboardingHarness() {
             isDemonstrationLocation: onboardingState.isDemonstrationLocation,
           });
           setSyncStatus("error");
+          const errorDetails = Array.isArray(res.error?.details)
+            ? res.error.details.map((d: any) => `${d.field}: ${d.message}`).join(", ")
+            : null;
           setSyncErrorMessage(
-            res.error?.message ?? "Unable to create profile on remote server. Changes saved to this device."
+            errorDetails
+              ? `${res.error?.message ?? "Profile validation failed"}: ${errorDetails}`
+              : (res.error?.message ?? "Unable to create profile on remote server. Changes saved to this device.")
           );
         }
       } else {
         // Update existing profile via PATCH /api/farmer-profile/{profileId}
         const res = await updateFarmerProfile(profileId, backendProfile);
         if (res.success) {
-          saveStoredProfile(profileId, res.data);
+          const updatedProfile: FarmerProfile = res.data ?? {
+            ...backendProfile,
+            profileId,
+          };
+          saveStoredProfile(profileId, updatedProfile);
           clearOnboardingDraft();
           setSyncStatus("saved_remote");
           router.push("/");
+        } else if (res.error?.code === "PROFILE_NOT_FOUND" || res.error?.code === "HTTP_404") {
+          // Stale profile ID after server restart: recover transparently by creating new profile
+          const createRes = await createFarmerProfile(backendProfile);
+          if (createRes.success) {
+            const newId = createRes.data.profileId;
+            const remoteProfile: FarmerProfile = createRes.data.profile ?? {
+              ...backendProfile,
+              ...createRes.data,
+              profileId: newId,
+            };
+            setProfileId(newId);
+            saveStoredProfile(newId, remoteProfile);
+            clearOnboardingDraft();
+            setSyncStatus("saved_remote");
+            router.push("/");
+          } else {
+            saveStoredProfile(profileId, backendProfile);
+            setSyncStatus("saved_local");
+            setSyncErrorMessage(
+              createRes.error.message ?? "Profile session expired; saved locally."
+            );
+          }
         } else {
           // Update failed remotely; cache profile locally with known backend profileId
           saveStoredProfile(profileId, backendProfile);
