@@ -5,11 +5,14 @@ import {
   RecommendationExplanation,
   RotationComparisonResult,
   RotationDefinition,
+  RotationEconomicComparison,
   RotationFarmerContext,
   SuitabilityStatus,
   WaterDemandCategory,
 } from "@/types";
 import { evaluateRotationFeasibility } from "./feasibility";
+import { calculateRotationEconomics } from "./economics";
+import { CANDIDATE_ROTATIONS } from "@/agronomy/rotations";
 
 /**
  * Stage B: Trade-Off Comparison Engine
@@ -26,7 +29,8 @@ import { evaluateRotationFeasibility } from "./feasibility";
 export function compareCropRotation(
   rotation: RotationDefinition,
   climate: ClimateIndicators,
-  farmerContext?: RotationFarmerContext
+  farmerContext?: RotationFarmerContext,
+  providedBaselineEconomics?: RotationEconomicComparison
 ): RotationComparisonResult {
   const feasibility = evaluateRotationFeasibility(rotation, farmerContext);
   const isBaseline = rotation.id === "rotation_rice_wheat";
@@ -290,6 +294,24 @@ export function compareCropRotation(
     actionableNextSteps,
   };
 
+  // Phase 2 & 3: Agricultural Economic Comparison Engine
+  const baselineDef =
+    rotation.id === "rotation_rice_wheat"
+      ? undefined
+      : CANDIDATE_ROTATIONS.find((r) => r.id === "rotation_rice_wheat");
+
+  const baselineEconomics =
+    providedBaselineEconomics ||
+    (baselineDef
+      ? calculateRotationEconomics(baselineDef, farmerContext)
+      : undefined);
+
+  const economics = calculateRotationEconomics(
+    rotation,
+    farmerContext,
+    baselineEconomics
+  );
+
   return {
     rotationId: rotation.id,
     rotationName: rotation.name,
@@ -306,6 +328,7 @@ export function compareCropRotation(
     recommendation,
     criticalLimitations,
     manageableRisks,
+    economics,
   };
 }
 

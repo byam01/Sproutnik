@@ -227,8 +227,9 @@ describe("Farmer Profile Lifecycle & Recovery Engine", () => {
     expect(initState.profileId).toBe("profile_rotated_uuid_99999");
 
     // 2. Perform subsequent PATCH
+    const newAreaField = createKnownField(4.0);
     const patchState = await updateActiveProfile(
-      { landAreaHectares: createKnownField(4.0) },
+      { landAreaHectares: newAreaField },
       {
         writeEnvelope: mockWriteEnvelope,
         updateProfile: mockUpdateProfile,
@@ -238,7 +239,7 @@ describe("Farmer Profile Lifecycle & Recovery Engine", () => {
     // Verify update was dispatched with NEW profileId, NOT the stale one!
     expect(mockUpdateProfile).toHaveBeenCalledWith(
       "profile_rotated_uuid_99999",
-      expect.objectContaining({ landAreaHectares: createKnownField(4.0) })
+      expect.objectContaining({ landAreaHectares: newAreaField })
     );
     expect(patchState.syncStatus).toBe("synced");
     expect(patchState.isSynchronized).toBe(true);

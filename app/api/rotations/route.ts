@@ -178,13 +178,24 @@ export async function GET(
     }
   }
 
-  // Run Stage A & Stage B evaluation for all candidate rotations
+  // Run Stage A, Stage B & Stage C evaluation for all candidate rotations
+  const baselineDef =
+    CANDIDATE_ROTATIONS.find((r) => r.id === "rotation_rice_wheat") ||
+    CANDIDATE_ROTATIONS[0];
+  const evaluatedBaseline = compareCropRotation(
+    baselineDef,
+    climate,
+    farmerContext
+  );
+  const baselineEconomics = evaluatedBaseline.economics;
+
   const evaluatedRotations = CANDIDATE_ROTATIONS.map((rotation) =>
-    compareCropRotation(rotation, climate, farmerContext)
+    rotation.id === baselineDef.id
+      ? evaluatedBaseline
+      : compareCropRotation(rotation, climate, farmerContext, baselineEconomics)
   );
 
-  const baseline =
-    evaluatedRotations.find((r) => r.isBaseline) || evaluatedRotations[0];
+  const baseline = evaluatedBaseline;
   const alternatives = evaluatedRotations.filter((r) => !r.isBaseline);
 
   const provenance: DataProvenanceMeta = {
@@ -197,10 +208,11 @@ export async function GET(
       "Punjab Agricultural University (PAU) Package of Practices for Kharif & Rabi Crops",
       "PAU Guidelines for Direct Seeded Rice (DSR) & Maize Diversification",
       "Central Ground Water Board (CGWB) Punjab Ground Water Year Book",
+      "Commission for Agricultural Costs and Prices (CACP) Reports on Price Policy for Kharif & Rabi Crops (2024-25)",
       "ICAR-IIFSR Long-term Cropping Systems Research Benchmarks",
     ],
     modelingNotice:
-      "Crop water requirement (ETc), irrigation deficit, and turnaround interval calculations are agronomic simulation models derived from PAU field benchmarks and Penman-Monteith approximations, not in-situ soil moisture or sap-flow sensor telemetry.",
+      "Crop water requirement (ETc), irrigation deficit, and economic return calculations are agronomic simulation models derived from PAU field benchmarks, Penman-Monteith approximations, and CACP cost of cultivation data, not in-situ soil moisture or sap-flow sensor telemetry or guaranteed market returns.",
     farmerContextApplied: {
       soilTexture: soilTexture || "loam (default assumption)",
       isSoilTextureReported: Boolean(soilTexture),

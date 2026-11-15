@@ -351,6 +351,102 @@ export interface RotationComparisonResult {
   recommendation?: RecommendationExplanation;
   criticalLimitations?: string[];
   manageableRisks?: AgronomicRisk[];
+  economics?: RotationEconomicComparison;
+}
+
+// ==========================================
+// 5B. Agricultural Economic Intelligence Contracts
+// ==========================================
+
+export interface InputCostBreakdown {
+  seedsInrPerHa: number;
+  fertilizersInrPerHa: number;
+  plantProtectionInrPerHa: number;
+  machineryLabourInrPerHa: number;
+  irrigationEnergyInrPerHa: number;
+  miscellaneousInrPerHa: number;
+  totalInrPerHa: number;
+}
+
+export type PriceBenchmarkType = "msp_benchmark" | "market_average" | "illustrative_assumption";
+
+export interface CropEconomicMetrics {
+  cropId: string;
+  cropName: string;
+  season: SeasonType;
+  yieldQuintalsPerHa: number;
+  yieldRangeQuintalsPerHa: { min: number; max: number };
+  sellingPriceInrPerQuintal: number;
+  priceType: PriceBenchmarkType;
+  mspBenchmarkInrPerQuintal?: number;
+  grossRevenueInrPerHa: number;
+  costOfCultivationInrPerHa: number;
+  netReturnInrPerHa: number;
+  breakEvenPriceInrPerQuintal: number;
+  breakEvenYieldQuintalsPerHa: number;
+  benefitCostRatio: number;
+  costBreakdown: InputCostBreakdown;
+  nitrogenCreditInrPerHa?: number;
+  byproductRevenueInrPerHa?: number;
+}
+
+export interface SensitivityPoint {
+  deltaPercent: number;
+  netReturnInrPerHa: number;
+  netReturnChangeInrPerHa: number;
+}
+
+export interface EconomicSensitivityAnalysis {
+  yieldSensitivity: SensitivityPoint[];
+  priceSensitivity: SensitivityPoint[];
+  costSensitivity: SensitivityPoint[];
+}
+
+export interface EconomicScenario {
+  scenarioName: "conservative" | "reference" | "optimistic";
+  label: string;
+  grossRevenueInrPerHa: number;
+  totalCostInrPerHa: number;
+  netReturnInrPerHa: number;
+  assumptions: string;
+}
+
+export interface BaselineEconomicDelta {
+  netReturnDeltaInrPerHa: number;
+  netReturnDeltaPercent: number;
+  costDeltaInrPerHa: number;
+  costDeltaPercent: number;
+  grossRevenueDeltaInrPerHa: number;
+  waterEnergySavingsInrPerHa: number;
+}
+
+export interface EconomicDataProvenance {
+  dataSource: string;
+  referenceMarketingSeason: string;
+  isVerifiedMsp: boolean;
+  priceType: PriceBenchmarkType;
+  estimationMethodology: string;
+  assumptions: string[];
+  limitations: string[];
+}
+
+export interface RotationEconomicComparison {
+  rotationId: string;
+  totalCultivationCostInrPerHa: number;
+  grossRevenueInrPerHa: number;
+  netReturnInrPerHa: number;
+  benefitCostRatio: number;
+  cropEconomics: CropEconomicMetrics[];
+  combinedCostBreakdown: InputCostBreakdown;
+  irrigationEnergyCostInrPerHa: number;
+  comparisonToBaseline?: BaselineEconomicDelta;
+  sensitivityAnalysis: EconomicSensitivityAnalysis;
+  scenarios: {
+    conservative: EconomicScenario;
+    reference: EconomicScenario;
+    optimistic: EconomicScenario;
+  };
+  provenance: EconomicDataProvenance;
 }
 
 // ==========================================
