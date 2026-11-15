@@ -229,10 +229,14 @@ export type IrrigationSourceType = "tubewell_deep" | "tubewell_shallow" | "canal
 export interface ProfileLocation {
   latitude?: number;
   longitude?: number;
+  name?: string;
   village?: string;
   district?: string;
   state?: string;
+  country?: string;
   countryCode: string;
+  elevationMeters?: number;
+  isDemonstration?: boolean;
   selectionMethod: "gps" | "map" | "manual";
 }
 
@@ -247,6 +251,25 @@ export const FARMING_GOALS = [
 ] as const;
 
 export type FarmingGoal = (typeof FARMING_GOALS)[number];
+export const APPROVED_CANONICAL_FARMING_GOALS = FARMING_GOALS;
+export type CanonicalFarmingGoal = FarmingGoal;
+
+export type CreateFarmerProfileRequest = Partial<Omit<FarmerProfile, "createdAt" | "updatedAt">> & {
+  profileId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  experienceWithDirectSeededRice?: ProfileField<boolean>;
+  riskTolerance?: ProfileField<"conservative" | "moderate" | "experimental">;
+};
+
+export type UpdateFarmerProfileRequest = Partial<Omit<FarmerProfile, "profileId" | "createdAt">> & {
+  experienceWithDirectSeededRice?: ProfileField<boolean>;
+  riskTolerance?: ProfileField<"conservative" | "moderate" | "experimental">;
+};
+
+export type FarmerProfileResponse = FarmerProfile & {
+  profile?: FarmerProfile;
+};
 
 export interface RotationFarmerContext {
   soilTexture?: SoilTextureType;

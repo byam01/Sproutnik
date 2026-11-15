@@ -56,15 +56,36 @@ export function compareCropRotation(
   const meanAnnualRain = climate.meanAnnualRainfallMm;
   const irrigationDeficitMm = Math.max(0, totalWaterMm - meanAnnualRain);
 
+  const isCanal = farmerContext?.irrigationSource === "canal";
+  const isConjunctive = farmerContext?.irrigationSource === "conjunctive";
+
   let groundwaterPressureIndex: "critical" | "high" | "moderate" | "low" = "moderate";
-  if (irrigationDeficitMm > 1200) {
-    groundwaterPressureIndex = "critical";
-  } else if (irrigationDeficitMm > 700) {
-    groundwaterPressureIndex = "high";
-  } else if (irrigationDeficitMm > 300) {
-    groundwaterPressureIndex = "moderate";
+  if (isCanal) {
+    if (totalWaterMm > 1800) {
+      groundwaterPressureIndex = "high";
+    } else if (totalWaterMm > 1000) {
+      groundwaterPressureIndex = "moderate";
+    } else {
+      groundwaterPressureIndex = "low";
+    }
+  } else if (isConjunctive) {
+    if (totalWaterMm > 1800) {
+      groundwaterPressureIndex = "high";
+    } else if (totalWaterMm > 1200) {
+      groundwaterPressureIndex = "moderate";
+    } else {
+      groundwaterPressureIndex = "low";
+    }
   } else {
-    groundwaterPressureIndex = "low";
+    if (irrigationDeficitMm > 1200) {
+      groundwaterPressureIndex = "critical";
+    } else if (irrigationDeficitMm > 700) {
+      groundwaterPressureIndex = "high";
+    } else if (irrigationDeficitMm > 300) {
+      groundwaterPressureIndex = "moderate";
+    } else {
+      groundwaterPressureIndex = "low";
+    }
   }
 
   // 1. Dimension: Climate & Thermal Compatibility
@@ -109,18 +130,30 @@ export function compareCropRotation(
         : groundwaterPressureIndex === "high"
         ? "caution"
         : "favorable",
-    summary: `Estimated total irrigation requirement is ~${totalWaterMm} mm/year. Against historical rainfall of ~${meanAnnualRain.toFixed(0)} mm, the net groundwater draft is ~${irrigationDeficitMm.toFixed(0)} mm/year (${groundwaterPressureIndex} pressure).`,
+    summary: isCanal
+      ? `Estimated annual supplemental irrigation requirement is ~${totalWaterMm} mm/yr (historical rainfall: ~${meanAnnualRain.toFixed(0)} mm/yr). Under canal command, primary demand is met by surface water, but rotational Warabandi scheduling (typically weekly turns) requires supplemental tubewell pumping during peak rice evapotranspiration (${groundwaterPressureIndex} depletion risk tier).`
+      : `Estimated annual supplemental irrigation requirement is ~${totalWaterMm} mm/yr (historical rainfall: ~${meanAnnualRain.toFixed(0)} mm/yr). Under tubewell irrigation, this translates to an estimated groundwater pumping load of ~${totalWaterMm} mm/yr (${groundwaterPressureIndex} depletion risk tier).`,
     advantages: [
       totalWaterMm < 1200
-        ? `Conserves substantial irrigation water (~${(2150 - totalWaterMm).toFixed(0)} mm less than baseline rice-wheat).`
+        ? (isCanal
+          ? `Estimated reduction in supplemental irrigation requirement: ~${(2150 - totalWaterMm).toFixed(0)} mm/yr compared to baseline rice–wheat.`
+          : `Estimated reduction in supplemental irrigation requirement: ~${(2150 - totalWaterMm).toFixed(0)} mm/yr, substantially mitigating groundwater overdraft.`)
         : "",
-      totalWaterMm <= 800 ? "Highly resilient against seasonal tubewell power cuts and water table drops." : "",
+      totalWaterMm <= 800
+        ? (isCanal
+          ? "Low water footprint provides high buffer against canal roster supply cuts."
+          : "Highly resilient against seasonal tubewell power cuts and water table drops.")
+        : "",
     ].filter(Boolean),
     disadvantages: [
       totalWaterMm >= 1800
-        ? "Severely accelerates aquifer overdraft in over-exploited Punjab blocks (>150% extraction stage in central districts)."
+        ? "Severely accelerates aquifer overdraft in over-exploited Punjab assessment blocks (>150% extraction stage in central districts)."
         : "",
-      hasPaddy ? "Requires continuous deep tubewell pumpage through the dry pre-monsoon weeks of June." : "",
+      hasPaddy
+        ? (isCanal
+          ? "Rotational Warabandi canal turns cannot sustain continuous standing water; supplemental tubewell pumping required during dry weeks."
+          : "Requires continuous deep tubewell pumpage through the dry pre-monsoon weeks of June.")
+        : "",
     ].filter(Boolean),
   };
 
@@ -699,7 +732,7 @@ interface OverallRationaleParams {
 
 function buildOverallRationale(params: OverallRationaleParams): string {
   if (params.suitabilityStatus === "unfeasible") {
-    return `This rotation is agronomically unfeasible under your farm conditions because ${params.criticalLimitations.join(" ")}`;
+    return `Agronomically unfeasible: This rotation is agronomically unfeasible under your farm conditions because ${params.criticalLimitations.join(" ")}`;
   }
 
   if (params.isBaseline) {

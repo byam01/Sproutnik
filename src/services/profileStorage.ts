@@ -11,12 +11,14 @@
  * 5. Do not write an incomplete draft profile as if it were a finalized backend profile.
  * 6. Graceful failure: QuotaExceededError or disabled storage must never throw uncaught exceptions.
  * 7. Legacy data: Existing `sproutnik_farmer_profile` data must NOT be silently migrated or deleted.
+ * 8. Onboarding draft key: Strictly uses `sproutnik:onboarding-draft:v1`.
  */
 
 import { FarmerProfile } from "@/types";
 
 export const PROFILE_STORAGE_KEY = "sproutnik:farmer-profile:v1";
 export const LEGACY_PROFILE_STORAGE_KEY = "sproutnik_farmer_profile";
+export const ONBOARDING_DRAFT_STORAGE_KEY = "sproutnik:onboarding-draft:v1";
 
 /**
  * Agreed versioned envelope for client-side profile caching.
@@ -222,7 +224,8 @@ export function inspectLegacyProfile(): LegacyProfileInspection {
 }
 
 // ==========================================
-// Convenience Wrappers for Profile Lifecycle
+// ==========================================
+// Convenience Wrappers for Profile Lifecycle & Frontend Storage
 // ==========================================
 
 export function loadStoredProfile(): StoredProfileEnvelope | null {
@@ -243,4 +246,92 @@ export function saveStoredProfile(profileId: string, profile: FarmerProfile): bo
 
 export function clearStoredProfile(): boolean {
   return clearProfileEnvelope();
+}
+
+// ==========================================
+// Onboarding Draft Storage Infrastructure
+// ==========================================
+
+let memoryDraftCache: OnboardingDraftEnvelope | null = null;
+
+export interface OnboardingDraftRawState {
+  mode?: string;
+  currentStepIndex?: number;
+  landUnit?: string;
+  isDemonstrationLocation?: boolean;
+}
+
+export interface OnboardingDraftEnvelope {
+  schemaVersion: 1;
+  draft: FarmerProfile;
+  rawState?: OnboardingDraftRawState;
+  savedAt: string;
+}
+
+export function isValidOnboardingDraftEnvelope(data: unknown): data is OnboardingDraftEnvelope {
+  if (!data || typeof data !== "object") return false;
+  const candidate = data as Partial<OnboardingDraftEnvelope>;
+  if (candidate.schemaVersion !== 1) return false;
+  if (typeof candidate.savedAt !== "string" || isNaN(Date.parse(candidate.savedAt))) return false;
+  if (!candidate.draft || typeof candidate.draft !== "object") return false;
+  return true;
+}
+
+export function loadOnboardingDraft(): OnboardingDraftEnvelope | null {
+  if (!isLocalStorageAvailable()) {
+    return memoryDraftCache;
+  }
+  try {
+    const raw = window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY);
+    if (!raw) return memoryDraftCache;
+    const parsed = JSON.parse(raw);
+    if (isValidOnboardingDraftEnvelope(parsed)) {
+      memoryDraftCache = parsed;
+      return parsed;
+    }
+    return memoryDraftCache;
+  } catch {
+    return memoryDraftCache;
+  }
+}
+
+export function saveOnboardingDraft(
+  draft: FarmerProfile,
+  rawState?: OnboardingDraftRawState
+): boolean {
+  if (!draft || typeof draft !== "object") {
+    return false;
+  }
+
+  const envelope: OnboardingDraftEnvelope = {
+    schemaVersion: 1,
+    draft,
+    rawState,
+    savedAt: new Date().toISOString(),
+  };
+
+  memoryDraftCache = envelope;
+
+  if (!isLocalStorageAvailable()) {
+    return false;
+  }
+
+  try {
+    const serialized = JSON.stringify(envelope);
+    window.localStorage.setItem(ONBOARDING_DRAFT_STORAGE_KEY, serialized);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function clearOnboardingDraft(): boolean {
+  memoryDraftCache = null;
+  if (!isLocalStorageAvailable()) return false;
+  try {
+    window.localStorage.removeItem(ONBOARDING_DRAFT_STORAGE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -51,8 +51,16 @@ export function DashboardHeader({
           </div>
         </div>
 
-        {/* Controls: Mode Switch & Refresh */}
+        {/* Controls: Mode Switch & Refresh & Onboarding */}
         <div className="flex items-center gap-2.5 self-start lg:self-auto flex-wrap">
+          <a
+            href="/onboarding"
+            className="px-3 py-1.5 bg-forest-50 hover:bg-forest-100 active:bg-forest-200 text-forest-800 border border-forest-200 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 shadow-2xs"
+          >
+            <span className="w-2 h-2 rounded-full bg-forest-600" />
+            Farm Setup &amp; Constraints →
+          </a>
+
           {/* Mock / Live Toggle */}
           <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-medium">
             <button
@@ -60,11 +68,10 @@ export function DashboardHeader({
               onClick={() => {
                 if (isMock) onToggleMock();
               }}
-              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                !isMock
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${!isMock
                   ? "bg-white text-forest-800 shadow-sm font-semibold"
                   : "text-slate-600 hover:text-slate-900"
-              }`}
+                }`}
             >
               <span className={`w-2 h-2 rounded-full ${!isMock ? "bg-forest-600" : "bg-slate-400"}`} />
               Live NASA Data
@@ -74,11 +81,10 @@ export function DashboardHeader({
               onClick={() => {
                 if (!isMock) onToggleMock();
               }}
-              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                isMock
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${isMock
                   ? "bg-white text-forest-800 shadow-sm font-semibold"
                   : "text-slate-600 hover:text-slate-900"
-              }`}
+                }`}
             >
               <span className={`w-2 h-2 rounded-full ${isMock ? "bg-amber-500" : "bg-slate-400"}`} />
               Calibrated Mock

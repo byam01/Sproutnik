@@ -7,7 +7,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { ApiResponse, FarmerProfile } from "@/types";
-import { validateFarmerProfilePartialInput } from "@/server/validators/profileValidator";
+import {
+  normalizeFarmerProfilePayload,
+  validateFarmerProfilePartialInput,
+} from "@/server/validators/profileValidator";
 import { farmerProfileStore, ProfileUpdatePayload } from "@/server/farmerProfileStore";
 
 export const dynamic = "force-dynamic";
@@ -119,8 +122,13 @@ export async function PATCH(
     );
   }
 
+  const rawBody = (body && typeof body === "object" && !Array.isArray(body))
+    ? (body as Record<string, unknown>)
+    : {};
+  const p = normalizeFarmerProfilePayload(rawBody);
+
   // Validate updates atomically before mutating store
-  const validation = validateFarmerProfilePartialInput(body);
+  const validation = validateFarmerProfilePartialInput(p);
   if (!validation.isValid) {
     return NextResponse.json(
       {
@@ -135,7 +143,6 @@ export async function PATCH(
     );
   }
 
-  const p = body as Record<string, unknown>;
   const now = new Date().toISOString();
   const updates: ProfileUpdatePayload = {
     updatedAt: now,

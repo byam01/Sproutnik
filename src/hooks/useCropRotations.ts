@@ -12,10 +12,18 @@ export interface UseCropRotationsResult {
   refetch: () => void;
 }
 
+/**
+ * Compatible context type that accepts canonical RotationFarmerContext
+ * while gracefully supporting optional legacy/alternate `groundwaterDepth` naming.
+ */
+export type FarmerRotationContext = RotationFarmerContext & {
+  groundwaterDepth?: number;
+};
+
 export function useCropRotations(
   coordinates: { lat: number; lon: number } = { lat: 30.9, lon: 75.85 },
   isMock = false,
-  farmerContext?: RotationFarmerContext
+  farmerContext?: RotationFarmerContext | FarmerRotationContext
 ): UseCropRotationsResult {
   const [data, setData] = useState<RotationsApiResponseData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,6 +33,11 @@ export function useCropRotations(
     setLoading(true);
     setError(null);
 
+    // Resolve groundwater depth from either canonical groundwaterDepthMeters or legacy groundwaterDepth
+    const resolvedGroundwaterDepth =
+      farmerContext?.groundwaterDepthMeters ??
+      (farmerContext as { groundwaterDepth?: number } | undefined)?.groundwaterDepth;
+
     const params: FetchRotationsParams = {
       lat: coordinates.lat,
       lon: coordinates.lon,
@@ -32,7 +45,7 @@ export function useCropRotations(
       endYear: 2024,
       soilTexture: farmerContext?.soilTexture,
       irrigationSource: farmerContext?.irrigationSource,
-      groundwaterDepth: farmerContext?.groundwaterDepthMeters,
+      groundwaterDepth: resolvedGroundwaterDepth,
       mock: isMock,
     };
 
@@ -54,6 +67,7 @@ export function useCropRotations(
     farmerContext?.soilTexture,
     farmerContext?.irrigationSource,
     farmerContext?.groundwaterDepthMeters,
+    (farmerContext as { groundwaterDepth?: number } | undefined)?.groundwaterDepth,
   ]);
 
   useEffect(() => {

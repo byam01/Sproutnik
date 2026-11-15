@@ -20,6 +20,7 @@ export function DashboardError({
   const isNetworkOrFetchFailed =
     error.code === "CLIMATE_FETCH_FAILED" ||
     error.code === "NETWORK_REQUEST_FAILED" ||
+    error.code === "NETWORK_ERROR" ||
     error.code === "NO_DATA_RETURNED";
 
   return (

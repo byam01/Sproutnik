@@ -103,7 +103,11 @@ export function evaluateRotationFeasibility(
     irrigationExplanation =
       "Conjunctive use of canal and tubewell water provides flexible irrigation while buffering against salinity buildup.";
   } else if (!farmerContext?.irrigationSource) {
-    warnings.push("Irrigation source not specified by farmer; evaluated under standard central Punjab deep tubewell assumptions.");
+    warnings.push(
+      "Irrigation source not specified by farmer; evaluated under standard regional assured irrigation assumptions (tubewell/canal)."
+    );
+    irrigationExplanation =
+      "Evaluated under standard regional assured irrigation assumptions (tubewell/canal).";
   }
 
   criteria.push({

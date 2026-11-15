@@ -13,15 +13,18 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { ApiResponse, FarmerProfile } from "@/types";
-import { validateFarmerProfileInput } from "@/server/validators/profileValidator";
+import { ApiResponse, FarmerProfile, FarmerProfileResponse } from "@/types";
+import {
+  normalizeFarmerProfilePayload,
+  validateFarmerProfileInput,
+} from "@/server/validators/profileValidator";
 import { farmerProfileStore } from "@/server/farmerProfileStore";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(
   request: NextRequest
-): Promise<NextResponse<ApiResponse<FarmerProfile>>> {
+): Promise<NextResponse<ApiResponse<FarmerProfileResponse>>> {
   let body: unknown;
   try {
     body = await request.json();
@@ -38,7 +41,12 @@ export async function POST(
     );
   }
 
-  const validation = validateFarmerProfileInput(body);
+  const rawPayload = (body && typeof body === "object" && !Array.isArray(body))
+    ? (body as Record<string, unknown>)
+    : {};
+  const payload = normalizeFarmerProfilePayload(rawPayload);
+
+  const validation = validateFarmerProfileInput(payload);
   if (!validation.isValid) {
     return NextResponse.json(
       {
@@ -52,8 +60,6 @@ export async function POST(
       { status: 400 }
     );
   }
-
-  const payload = body as Record<string, unknown>;
 
   // Server generates canonical immutable identity and timestamps
   const profileId = crypto.randomUUID();
@@ -86,10 +92,16 @@ export async function POST(
     );
   }
 
+  // Return standard ApiResponse envelope with profileId at top-level and profile field for frontend compatibility
+  const responseData: FarmerProfileResponse = {
+    ...storeResult.profile,
+    profile: storeResult.profile,
+  };
+
   return NextResponse.json(
     {
       success: true,
-      data: storeResult.profile,
+      data: responseData,
     },
     { status: 201 }
   );

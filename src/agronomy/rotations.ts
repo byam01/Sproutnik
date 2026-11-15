@@ -35,7 +35,7 @@ export const CANDIDATE_ROTATIONS: RotationDefinition[] = [
     id: "rotation_maize_wheat",
     name: "Kharif Maize – Wheat (Diversified Cereal)",
     description:
-      "Replaces water-intensive kharif rice with grain maize. Reduces total irrigation water consumption by 60–65%, halts groundwater drawdown, and provides a comfortable 30–40 day window for wheat field preparation.",
+      "Replaces water-intensive kharif rice with grain maize. Reduces total irrigation water consumption by 60–65%, substantially reducing tubewell pumping load and providing a comfortable 30–40 day window for wheat field preparation.",
     cropSequence: ["kharif_maize", "bread_wheat"],
     crops: [CROPS_PUNJAB.kharif_maize, CROPS_PUNJAB.bread_wheat],
     turnaroundDays: [35, 30],
@@ -68,7 +68,7 @@ export const CANDIDATE_ROTATIONS: RotationDefinition[] = [
     id: "rotation_maize_mustard_moong",
     name: "Maize – Mustard – Summer Moong (High Diversity)",
     description:
-      "A fully diversified cereal–oilseed–pulse rotation completely free of flooded paddy. Minimizes total water footprint (~1,000 mm total), breaks continuous weed cycles, and maximizes biological nitrogen cycling.",
+      "A fully diversified cereal–oilseed–pulse rotation completely free of flooded paddy. Minimizes total irrigation footprint (~1,030 mm annual irrigation demand), breaks continuous weed cycles, and maximizes biological nitrogen cycling.",
     cropSequence: ["kharif_maize", "rabi_mustard", "summer_moong"],
     crops: [
       CROPS_PUNJAB.kharif_maize,
@@ -84,3 +84,25 @@ export const CANDIDATE_ROTATIONS: RotationDefinition[] = [
     ],
   },
 ];
+
+/**
+ * Calculates the total estimated annual supplemental irrigation application requirement (in mm/year)
+ * for a given candidate rotation, based on PAU package of practices.
+ */
+export function getRotationIrrigationWaterMm(rotationId: string): number {
+  const def = CANDIDATE_ROTATIONS.find((r) => r.id === rotationId);
+  if (!def) return 1000;
+  return def.crops.reduce(
+    (acc, crop) => acc + (crop.estimatedIrrigationRequirementsMm || 0),
+    0
+  );
+}
+
+/**
+ * Returns the minimum turnaround interval (in days) between consecutive crops in a rotation sequence.
+ */
+export function getRotationMinTurnaroundDays(rotationId: string): number {
+  const def = CANDIDATE_ROTATIONS.find((r) => r.id === rotationId);
+  if (!def || def.turnaroundDays.length === 0) return 15;
+  return Math.min(...def.turnaroundDays);
+}
