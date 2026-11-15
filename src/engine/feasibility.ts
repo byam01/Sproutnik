@@ -80,12 +80,12 @@ export function evaluateRotationFeasibility(
       irrigationExplanation = `Low water footprint (~${totalEstimatedWaterMm} mm) can be supported under rainfed conditions with in situ moisture conservation.`;
     }
   } else if (farmerContext?.irrigationSource === "tubewell_shallow") {
-    if (hasPuddleRice && (farmerContext.groundwaterDepthMeters ?? 0) > 20) {
+    if (hasPuddleRice && (farmerContext.groundwaterDepthMeters ?? 0) > 15) {
       warnings.push(
-        "Shallow tubewells risk discharge failure during peak June–July paddy transplantation when local water table drops below centrifugal suction limits."
+        "Shallow tubewells risk discharge failure during peak June–July paddy transplantation when local water table drops below centrifugal suction limits (>15 m depth)."
       );
       irrigationExplanation =
-        "Shallow tubewell may experience suction lift limits during peak May–June transplanting due to deep water table (>20 m).";
+        "Shallow tubewell may experience suction lift limits during peak May–June transplanting due to deep water table (>15 m depth).";
     } else {
       irrigationExplanation = "Shallow tubewell capacity matches crop water stages adequately.";
     }

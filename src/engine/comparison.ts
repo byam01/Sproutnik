@@ -108,13 +108,13 @@ export function compareCropRotation(
     summary: `Estimated total irrigation requirement is ~${totalWaterMm} mm/year. Against historical rainfall of ~${meanAnnualRain.toFixed(0)} mm, the net groundwater draft is ~${irrigationDeficitMm.toFixed(0)} mm/year (${groundwaterPressureIndex} pressure).`,
     advantages: [
       totalWaterMm < 1200
-        ? `Conserves substantial groundwater (~${(2150 - totalWaterMm).toFixed(0)} mm less than baseline rice-wheat).`
+        ? `Conserves substantial irrigation water (~${(2150 - totalWaterMm).toFixed(0)} mm less than baseline rice-wheat).`
         : "",
       totalWaterMm <= 800 ? "Highly resilient against seasonal tubewell power cuts and water table drops." : "",
     ].filter(Boolean),
     disadvantages: [
       totalWaterMm >= 1800
-        ? "Severely accelerates aquifer overdraft in over-exploited Ludhiana district (>150% extraction stage)."
+        ? "Severely accelerates aquifer overdraft in over-exploited Punjab blocks (>150% extraction stage in central districts)."
         : "",
       hasPaddy ? "Requires continuous deep tubewell pumpage through the dry pre-monsoon weeks of June." : "",
     ].filter(Boolean),
@@ -188,7 +188,7 @@ export function compareCropRotation(
 
   // Collect distinct diversification benefits and key risks
   const diversificationBenefits = [
-    hasMoong ? "Biological atmospheric nitrogen fixation (30–40 kg N/ha)" : "",
+    hasMoong ? "Biological atmospheric nitrogen fixation (estimated 30–40 kg N/ha credit)" : "",
     hasMaize ? "60–65% reduction in groundwater irrigation footprint vs paddy" : "",
     hasMustard ? "Diversification away from cereal monoculture with deep taproot scavenging" : "",
     !hasPaddy ? "Halts subsoil hardpan formation and improves soil infiltration capacity" : "",
@@ -243,9 +243,11 @@ export function compareCropRotation(
     groundwaterPressureIndex,
   });
 
-  // 4. Concrete actionable next steps
+  // 4. Concrete actionable next steps (tailored to farmer context and feasibility)
   const actionableNextSteps = buildActionableNextSteps({
     rotationId: rotation.id,
+    suitabilityStatus,
+    criticalLimitations,
     soilTexture: farmerContext?.soilTexture,
     irrigationSource: farmerContext?.irrigationSource,
     minTurnaround,
@@ -261,6 +263,7 @@ export function compareCropRotation(
       criticalLimitations,
       irrigationDeficitMm,
       totalWaterMm,
+      irrigationSource: farmerContext?.irrigationSource,
     }),
     soilSuitabilityRationale: buildSoilSuitabilityRationale({
       rotationId: rotation.id,
@@ -335,13 +338,19 @@ function buildManageableRisks(params: BuildRisksParams): AgronomicRisk[] {
 
   // 1. Water Exposure Risks
   if (params.hasPaddy) {
+    const isCanalOnly = irrigation === "canal";
     risks.push({
       category: "water",
       severity: "manageable",
-      title: "Aquifer Over-Draft Under Flooded Rice",
-      description: `Transplanted puddle rice requires ~1,800 mm irrigation, generating a net annual water deficit of ~${params.irrigationDeficitMm.toFixed(0)} mm against historical rainfall.`,
-      mitigationGuidance:
-        "Deploy PAU tensiometers to schedule irrigations 2 days after ponded water has infiltrated, reducing tubewell pumping by 20–25% without yield penalty.",
+      title: isCanalOnly
+        ? "Water Imbalance & Canal Supply Synchronization"
+        : "Aquifer Over-Draft Under Flooded Rice",
+      description: isCanalOnly
+        ? `Transplanted puddled rice requires an estimated ~1,750 mm water (~${params.totalWaterMm} mm for full rotation), creating delivery bottlenecks during rotational canal closures.`
+        : `Transplanted puddled rice requires an estimated ~1,750 mm water (~${params.totalWaterMm} mm for full rotation), generating an estimated net annual irrigation deficit of ~${params.irrigationDeficitMm.toFixed(0)} mm against historical rainfall.`,
+      mitigationGuidance: isCanalOnly
+        ? "Construct an on-farm storage pond to buffer against rotational canal closures; align transplanting with peak canal supply cycles."
+        : "Deploy PAU tensiometers to schedule tubewell irrigations 2 days after ponded water has infiltrated rather than maintaining continuous submergence, reducing tubewell pumping by 20–25% without yield penalty.",
     });
   }
 
@@ -351,7 +360,7 @@ function buildManageableRisks(params: BuildRisksParams): AgronomicRisk[] {
       severity: "manageable",
       title: "Shallow Tubewell Suction Limit Risk",
       description:
-        "Water table drop below 15–20 m during May–June can cause centrifugal pump cavitation and discharge interruption during critical crop phases.",
+        "Water table drop below 15 m during May–June can cause centrifugal pump cavitation and discharge interruption during critical crop phases.",
       mitigationGuidance:
         "Lower the centrifugal pump into a motor pit or convert to a submersible assembly; pre-irrigate fields during off-peak night electricity supply.",
     });
@@ -402,7 +411,7 @@ function buildManageableRisks(params: BuildRisksParams): AgronomicRisk[] {
       description:
         "Aerobic unflooded soil prevents reduction of ferric (Fe3+) iron to plant-available ferrous (Fe2+) form, causing interveinal yellowing of young leaves.",
       mitigationGuidance:
-        "Spray 1% ferrous sulphate (FeSO4) solution (1 kg FeSO4 in 100 L water per acre) 2–3 times at 5–7 day intervals upon earliest detection of yellowing (15–25 DAS).",
+        "Monitor crop weekly at 15–25 DAS for interveinal yellowing. If iron chlorosis appears, apply foliar ferrous sulphate sprays according to current PAU Package of Practices recommendations.",
     });
   }
 
@@ -467,7 +476,7 @@ function buildManageableRisks(params: BuildRisksParams): AgronomicRisk[] {
     });
   }
 
-  // 5. Pest, Disease & Weed Risks
+  // 5. Pest, Disease & Weed Risks (Safety Audited: Non-prescriptive, referencing PAU and extension)
   if (params.isBaseline) {
     risks.push({
       category: "pest_disease",
@@ -476,7 +485,7 @@ function buildManageableRisks(params: BuildRisksParams): AgronomicRisk[] {
       description:
         "Decades of continuous rice-wheat monoculture have selected multiple-herbicide resistant biotypes of canary grass in central Punjab.",
       mitigationGuidance:
-        "Rotate herbicide modes of action: apply pre-emergence pendimethalin or pyroxasulfone within 2 days of sowing, avoiding repeated reliance on clodinafop or sulfosulfuron.",
+        "Rotate herbicide chemistries and modes of action to manage resistance; consult current PAU weed management advisories and product labels for approved pre-emergence and post-emergence selections.",
     });
   }
 
@@ -488,7 +497,7 @@ function buildManageableRisks(params: BuildRisksParams): AgronomicRisk[] {
       description:
         "Absence of a standing water blanket allows simultaneous emergence of grassy weeds (Echinochloa) and sedges alongside rice seedlings.",
       mitigationGuidance:
-        "Apply pendimethalin 30 EC at 1.0 L/acre within 24 hours of dry sowing in moist seedbed; follow with post-emergence bispyribac-sodium (10 SC at 100 mL/acre) at 20–25 DAS.",
+        "Adopt integrated weed management combining precision laser leveling with approved pre-emergence and post-emergence herbicide programs; consult current PAU DSR weed management guidelines for active ingredient selections.",
     });
   }
 
@@ -500,7 +509,7 @@ function buildManageableRisks(params: BuildRisksParams): AgronomicRisk[] {
       description:
         "Invasive pest damaging central whorls of young maize plants during vegetative growth.",
       mitigationGuidance:
-        "Inspect whorls weekly; apply whorl application of chlorantraniliprole 18.5 SC (0.4 mL/L) or neem-based insecticide (azadirachtin 1500 ppm at 5 mL/L) at first sign of pinhole leaf damage.",
+        "Inspect whorls weekly for pinhole damage. Deploy pheromone monitoring traps and consult local extension specialists for PAU-recommended bio-rational or chemical control options.",
     });
   }
 
@@ -512,7 +521,7 @@ function buildManageableRisks(params: BuildRisksParams): AgronomicRisk[] {
       description:
         "Aphids colonize inflorescences and pods during February, sucking sap and causing pod curling.",
       mitigationGuidance:
-        "Sow mustard timely by October 25 to complete flowering before peak aphid emergence; spray thiamethoxam 25 WG (80 g/ha) if aphid colonies exceed 1.5 cm on main terminal shoot.",
+        "Sow mustard timely by October 25 to complete flowering before peak aphid emergence. Scout weekly in January–February; apply PAU-recommended aphicides strictly when economic threshold levels (ETL) are reached in consultation with local extension staff.",
     });
   }
 
@@ -524,7 +533,7 @@ function buildManageableRisks(params: BuildRisksParams): AgronomicRisk[] {
       description:
         "Whitefly-transmitted geminivirus causing yellowing, stunting, and severe yield reduction in greengram.",
       mitigationGuidance:
-        "Sow certified YMV-resistant cultivars (SML 1827 or SML 818) and treat seeds with imidacloprid (5 g/kg seed) to manage early whitefly vectors.",
+        "Select certified YMV-resistant cultivars (such as SML 1827 or SML 818). Follow PAU guidelines for seed treatment and vector management strictly adhering to approved product labels.",
     });
   }
 
@@ -580,26 +589,41 @@ function determineSuitabilityStatus(params: SuitabilityParams): SuitabilityStatu
 
 interface ActionableStepsParams {
   rotationId: string;
+  suitabilityStatus: SuitabilityStatus;
+  criticalLimitations: string[];
   soilTexture?: string;
   irrigationSource?: string;
   minTurnaround: number;
 }
 
 function buildActionableNextSteps(params: ActionableStepsParams): string[] {
+  // Guard: unfeasible rotations must not provide operational farming steps
+  if (params.suitabilityStatus === "unfeasible") {
+    return [
+      `Do not initiate this rotation under current field constraints: ${params.criticalLimitations[0] || "Feasibility criteria are not met."}`,
+      params.irrigationSource === "rainfed_only"
+        ? "Develop on-farm water harvesting structures (e.g. farm ponds) or secure an assured irrigation source before evaluating water-intensive crops."
+        : "Explore alternative crops with lower soil texture or moisture sensitivity better suited to your field conditions.",
+      "Consult local agricultural extension specialists (PAU Krishi Vigyan Kendra) for crop choices aligned with your resource base.",
+    ];
+  }
+
   switch (params.rotationId) {
     case "rotation_rice_wheat":
       return [
-        "Deploy soil matric tensiometers to schedule paddy irrigations 2 days after ponded water infiltrates, saving 20–25% irrigation water.",
+        params.irrigationSource === "canal"
+          ? "Synchronize field preparation and transplanting with assigned warabandi canal turns; consider on-farm buffer storage to bridge canal closure periods."
+          : "Deploy soil matric tensiometers to schedule tubewell irrigations 2 days after ponded water infiltrates, saving 20–25% irrigation water (PAU recommendation).",
         "Adopt Happy Seeder or Super Seeder technology to direct-drill wheat directly into standing rice residue without burning.",
-        "Rotate post-emergence wheat herbicides to counter Phalaris minor resistance (avoid repeating sulfosulfuron/clodinafop).",
+        "Rotate herbicide modes of action to manage resistant Phalaris minor (canary grass); consult PAU weed management advisories for approved options.",
         "Complete wheat sowing by November 15 using terminal-heat resilient cultivars (e.g., PBW 826 / DBW 303).",
       ];
 
     case "rotation_dsr_wheat":
       return [
         "Perform precision laser land leveling before sowing to ensure uniform seedling emergence and eliminate uneven dry patches.",
-        "Apply pendimethalin 30 EC at 1.0 L/acre within 24 hours of DSR seeding in moist soil (tar-watter) to establish early weed control.",
-        "Scout weekly for yellowing leaves (iron chlorosis); apply 1% ferrous sulphate foliar spray at 15–20 DAS upon earliest symptom detection.",
+        "Apply an approved pre-emergence herbicide in moist seedbed (tar-watter) within 24 hours of DSR seeding following current PAU guidelines and product label directions.",
+        "Scout weekly for interveinal yellowing (iron chlorosis); apply foliar ferrous sulphate sprays at 15–20 DAS following PAU-recommended concentrations upon symptom detection.",
         "Utilize the generous 25-day turnaround window to prepare wheat seedbed without rush or stubble burning.",
       ];
 
@@ -608,24 +632,26 @@ function buildActionableNextSteps(params: ActionableStepsParams): string[] {
         params.soilTexture === "clay_loam"
           ? "Sow hybrid kharif maize (e.g. PMH 13 / PMH 1) on raised beds or ridges to facilitate root aeration and prevent monsoon water stagnation."
           : "Sow recommended hybrid maize (PMH 13 / PMH 1) in late May or early June to leverage monsoon onset with 4–5 total irrigations.",
-        "Install pheromone traps for Fall Armyworm surveillance; apply targeted chlorantraniliprole 18.5 SC if central whorl pinhole damage appears.",
+        "Install pheromone traps for Fall Armyworm surveillance; inspect central whorls and apply PAU-recommended bio-rational or chemical controls if damage thresholds are reached.",
         "Leverage the comfortable 35-day turnaround after late-September maize harvest for thorough wheat land preparation and timely sowing by Nov 5–10.",
-        "Reduce annual irrigation pumping by >50%, directly conserving aquifer levels and lowering diesel/electricity operating costs.",
+        params.irrigationSource === "canal"
+          ? "Coordinate maize irrigations with canal rotational turns during critical early vegetative and tasseling stages."
+          : "Reduce annual irrigation pumping by >50% compared to paddy, directly conserving aquifer levels and lowering pumping energy costs.",
       ];
 
     case "rotation_rice_wheat_moong":
       return [
         "Direct-drill short-duration summer moong (SML 818 or SML 1827) with a zero-till drill immediately following combine harvest of wheat by mid-April.",
-        "Treat moong seed with Rhizobium inoculant and systemic fungicide to maximize biological nitrogen fixation and seedling vigor.",
+        "Inoculate moong seed with recommended Rhizobium and bio-fertilizer strains adhering to PAU seed-treatment guidelines to maximize biological nitrogen fixation.",
         "Terminate summer moong harvest by the third week of June to enable timely paddy establishment without compromising main season yields.",
-        "Deduct 30–40 kg/ha of synthetic nitrogen fertilizer from subsequent paddy basal dose in recognition of incorporated legume residue biomass.",
+        "Incorporate legume residue biomass to credit an estimated 30–40 kg N/ha toward subsequent crop nitrogen requirements as per PAU guidelines.",
       ];
 
     case "rotation_maize_mustard_moong":
       return [
         "Sow raya/mustard (e.g. RLC 3 or PBR 357) by mid-October immediately following early maize harvest to escape peak winter aphid pressure.",
         "Implement ridge-furrow planting for kharif maize to prevent drainage saturation and ensure adequate aeration during monsoon storms.",
-        "Scout mustard crop weekly starting January for aphid colonies on top 10 cm inflorescence; apply economic threshold level (ETL) management.",
+        "Scout mustard crop weekly starting January for aphid colonies; apply PAU-approved treatments strictly at economic threshold levels (ETL) in consultation with local extension specialists.",
         "Direct-seed summer moong in late March after mustard harvest to capture atmospheric nitrogen and produce bonus summer pulse grain.",
       ];
 
@@ -645,6 +671,7 @@ interface OverallRationaleParams {
   criticalLimitations: string[];
   irrigationDeficitMm: number;
   totalWaterMm: number;
+  irrigationSource?: string;
 }
 
 function buildOverallRationale(params: OverallRationaleParams): string {
@@ -653,18 +680,21 @@ function buildOverallRationale(params: OverallRationaleParams): string {
   }
 
   if (params.isBaseline) {
-    return `Baseline rice–wheat is viable with assured tubewell irrigation and provides market price certainty via MSP. However, it is rated conditionally suitable due to severe long-term groundwater overdraft (~${params.irrigationDeficitMm.toFixed(0)} mm annual deficit) and subsoil compaction from puddling.`;
+    if (params.irrigationSource === "canal") {
+      return `Baseline rice–wheat under canal supply provides market price certainty via MSP. However, it depends on rotational canal warabandi schedules, requiring on-farm storage during peak nursery establishment, and continues subsoil compaction from puddling.`;
+    }
+    return `Baseline rice–wheat is viable with assured tubewell irrigation and provides market price certainty via MSP. However, it is rated conditionally suitable due to severe long-term groundwater overdraft (~${params.irrigationDeficitMm.toFixed(0)} mm annual deficit against local rainfall) and subsoil compaction from puddling.`;
   }
 
   switch (params.rotationId) {
     case "rotation_maize_wheat":
-      return `Highly recommended diversification pathway for central Punjab. Slicing irrigation requirements by ~58% compared to paddy, it halts local groundwater drawdown while providing a comfortable 35-day window for field preparation before wheat.`;
+      return `Highly recommended diversification pathway for central Punjab. Slicing kharif irrigation requirements by ~65–70% (500 mm vs 1,750 mm in paddy) and annual rotation irrigation by ~58% (900 mm vs 2,150 mm), it halts local groundwater drawdown while providing a comfortable 35-day window for field preparation before wheat.`;
 
     case "rotation_maize_mustard_moong":
-      return `Outstanding climate-resilient cropping system offering complete diversification across three botanical families (cereal, oilseed, pulse). Conserves >1,000 mm irrigation water annually while contributing 30–40 kg/ha atmospheric nitrogen to the soil.`;
+      return `Outstanding climate-resilient cropping system offering complete diversification across three botanical families (cereal, oilseed, pulse). Conserves ~50% irrigation water annually compared to baseline rice-wheat (~1,080 mm vs ~2,150 mm) while contributing an estimated 30–40 kg/ha biological nitrogen credit to the soil.`;
 
     case "rotation_dsr_wheat":
-      return `A viable transition system that retains rice cultivation while reducing irrigation pumping by 15–20% and avoiding subsoil hardpan creation. Requires disciplined weed control and precision laser leveling.`;
+      return `A viable transition system that retains rice cultivation while reducing irrigation pumping by 15–20% in the rice phase and avoiding subsoil hardpan creation. Requires disciplined weed control and precision laser leveling.`;
 
     case "rotation_rice_wheat_moong":
       return `Intensified triple-cropping system that generates an additional high-value pulse harvest and enriches soil nitrogen between wheat and paddy. Requires rigorous calendar adherence due to narrow turnaround intervals.`;

@@ -54,7 +54,7 @@ describe("Agricultural Intelligence & Explainable Recommendations", () => {
 
       const pestRisk = result.manageableRisks?.find((r) => r.category === "pest_disease");
       expect(pestRisk?.title).toContain("Phalaris Minor");
-      expect(pestRisk?.mitigationGuidance).toContain("pendimethalin");
+      expect(pestRisk?.mitigationGuidance).toContain("PAU weed management");
     });
 
     it("identifies rice-wheat as unfeasible under rainfed-only conditions with explicit critical limitation", () => {
@@ -132,7 +132,7 @@ describe("Agricultural Intelligence & Explainable Recommendations", () => {
 
       const weedRisk = result.manageableRisks?.find((r) => r.title.includes("Weed Competition"));
       expect(weedRisk).toBeDefined();
-      expect(weedRisk?.mitigationGuidance).toContain("pendimethalin");
+      expect(weedRisk?.mitigationGuidance).toContain("PAU DSR weed management");
 
       const feRisk = result.manageableRisks?.find((r) => r.title.includes("Iron Chlorosis"));
       expect(feRisk).toBeDefined();
@@ -148,11 +148,11 @@ describe("Agricultural Intelligence & Explainable Recommendations", () => {
 
       expect(result.suitabilityStatus).toBe("highly_suitable");
       expect(result.recommendation?.overallRationale).toContain("three botanical families");
-      expect(result.recommendation?.overallRationale).toContain("atmospheric nitrogen");
+      expect(result.recommendation?.overallRationale).toContain("biological nitrogen");
 
       const aphidRisk = result.manageableRisks?.find((r) => r.title.includes("Aphid"));
       expect(aphidRisk).toBeDefined();
-      expect(aphidRisk?.mitigationGuidance).toContain("thiamethoxam");
+      expect(aphidRisk?.mitigationGuidance).toContain("economic threshold");
 
       expect(
         result.recommendation?.actionableNextSteps.some((s) => s.toLowerCase().includes("raya/mustard"))
@@ -257,6 +257,95 @@ describe("Agricultural Intelligence & Explainable Recommendations", () => {
       expect(provenance.farmerContextApplied.soilTexture).toContain("default assumption");
       expect(provenance.farmerContextApplied.isIrrigationSourceReported).toBe(false);
       expect(provenance.farmerContextApplied.irrigationSource).toContain("default assumption");
+    });
+  });
+
+  describe("Integrity & Safety Audit Regression Tests", () => {
+    it("ensures a canal-only farmer never receives tubewell or tensiometer instructions for rice-wheat", () => {
+      const canalFarmer: RotationFarmerContext = {
+        soilTexture: "loam",
+        irrigationSource: "canal",
+      };
+
+      const result = compareCropRotation(riceWheat, MOCK_CLIMATE_INDICATORS_LUDHIANA, canalFarmer);
+
+      // Overall rationale must acknowledge canal supply, not tubewells
+      expect(result.recommendation?.overallRationale).toContain("canal supply");
+      expect(result.recommendation?.overallRationale).not.toContain("viable with assured tubewell irrigation");
+
+      // Actionable steps must mention warabandi and buffer storage, NOT tensiometer scheduling
+      const nextSteps = result.recommendation?.actionableNextSteps || [];
+      expect(nextSteps.some((step) => step.includes("warabandi"))).toBe(true);
+      expect(nextSteps.some((step) => step.toLowerCase().includes("tensiometer"))).toBe(false);
+
+      // Water risk title and mitigation must be canal-specific
+      const waterRisk = result.manageableRisks?.find((r) => r.category === "water");
+      expect(waterRisk?.title).toContain("Canal Supply");
+      expect(waterRisk?.mitigationGuidance).toContain("on-farm storage pond");
+    });
+
+    it("ensures rainfed-only unfeasible rotations do not offer operational irrigation steps", () => {
+      const rainfedFarmer: RotationFarmerContext = {
+        soilTexture: "loam",
+        irrigationSource: "rainfed_only",
+      };
+
+      const result = compareCropRotation(riceWheat, MOCK_CLIMATE_INDICATORS_LUDHIANA, rainfedFarmer);
+
+      expect(result.suitabilityStatus).toBe("unfeasible");
+      const nextSteps = result.recommendation?.actionableNextSteps || [];
+
+      // Must not give operational paddy irrigation steps
+      expect(nextSteps.some((s) => s.toLowerCase().includes("tensiometer"))).toBe(false);
+      expect(nextSteps.some((s) => s.toLowerCase().includes("happy seeder"))).toBe(false);
+
+      // Must provide constraint prerequisite advice
+      expect(nextSteps[0]).toContain("Do not initiate this rotation");
+      expect(nextSteps.some((s) => s.includes("water harvesting structures"))).toBe(true);
+    });
+
+    it("verifies that no recommendation or risk mitigation contains prescriptive chemical dosage rates", () => {
+      const dosageRegex = /\b(\d+(\.\d+)?\s*(L\/acre|L\/ha|mL\/L|g\/ha|g\/kg|kg\/acre))\b/i;
+
+      // Check across all candidate rotations and profiles
+      const testProfiles: (RotationFarmerContext | undefined)[] = [
+        standardLoamProfile,
+        { soilTexture: "clay_loam", irrigationSource: "canal" },
+        { soilTexture: "sandy_loam", irrigationSource: "tubewell_shallow", groundwaterDepthMeters: 18 },
+        undefined,
+      ];
+
+      for (const rot of CANDIDATE_ROTATIONS) {
+        for (const profile of testProfiles) {
+          const result = compareCropRotation(rot, MOCK_CLIMATE_INDICATORS_LUDHIANA, profile);
+
+          // Check actionable steps
+          for (const step of result.recommendation?.actionableNextSteps || []) {
+            expect(step).not.toMatch(dosageRegex);
+          }
+
+          // Check manageable risks
+          for (const risk of result.manageableRisks || []) {
+            if (risk.mitigationGuidance) {
+              expect(risk.mitigationGuidance).not.toMatch(dosageRegex);
+            }
+          }
+        }
+      }
+    });
+
+    it("ensures all chemical pest/weed mitigations explicitly refer to PAU guidelines or agricultural professionals", () => {
+      const result = compareCropRotation(dsrWheat, MOCK_CLIMATE_INDICATORS_LUDHIANA, standardLoamProfile);
+
+      const weedRisk = result.manageableRisks?.find((r) => r.title.includes("Weed Competition"));
+      expect(weedRisk?.mitigationGuidance).toMatch(/PAU|extension/i);
+
+      const feRisk = result.manageableRisks?.find((r) => r.title.includes("Iron Chlorosis"));
+      expect(feRisk?.mitigationGuidance).toMatch(/PAU/i);
+
+      const maizeResult = compareCropRotation(maizeWheat, MOCK_CLIMATE_INDICATORS_LUDHIANA, standardLoamProfile);
+      const fawRisk = maizeResult.manageableRisks?.find((r) => r.title.includes("Fall Armyworm"));
+      expect(fawRisk?.mitigationGuidance).toMatch(/PAU|extension/i);
     });
   });
 });
