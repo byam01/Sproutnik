@@ -220,3 +220,27 @@ export function inspectLegacyProfile(): LegacyProfileInspection {
     };
   }
 }
+
+// ==========================================
+// Convenience Wrappers for Profile Lifecycle
+// ==========================================
+
+export function loadStoredProfile(): StoredProfileEnvelope | null {
+  const res = readProfileEnvelope();
+  return res.success ? res.envelope : null;
+}
+
+export function saveStoredProfile(profileId: string, profile: FarmerProfile): boolean {
+  const envelope: StoredProfileEnvelope = {
+    schemaVersion: 1,
+    profileId,
+    profile,
+    savedAt: new Date().toISOString(),
+  };
+  const res = writeProfileEnvelope(envelope);
+  return res.success;
+}
+
+export function clearStoredProfile(): boolean {
+  return clearProfileEnvelope();
+}

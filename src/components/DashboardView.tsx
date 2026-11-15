@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useClimateData } from "@/hooks/useClimateData";
 import { useCropRotations } from "@/hooks/useCropRotations";
+import { useFarmerProfile } from "@/hooks/useFarmerProfile";
+import { isKnownField, RotationFarmerContext } from "@/types";
 import { Sidebar } from "./Sidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { ClimateMetricCard } from "./ClimateMetricCard";
@@ -23,6 +25,38 @@ import {
 
 export function DashboardView() {
   const {
+    profile,
+    profileId,
+    syncStatus,
+    isSynchronized,
+    error: profileError,
+    recoveryOccurred,
+  } = useFarmerProfile();
+
+  const customCoordinates = useMemo(() => {
+    if (profile && isKnownField(profile.location)) {
+      const loc = profile.location.value;
+      if (
+        typeof loc.latitude === "number" &&
+        typeof loc.longitude === "number" &&
+        !isNaN(loc.latitude) &&
+        !isNaN(loc.longitude)
+      ) {
+        return { lat: loc.latitude, lon: loc.longitude };
+      }
+    }
+    return undefined;
+  }, [profile]);
+
+  const farmerContext: RotationFarmerContext | undefined = useMemo(() => {
+    if (!profile) return undefined;
+    return {
+      soilTexture: isKnownField(profile.soilTexture) ? profile.soilTexture.value : undefined,
+      irrigationSource: isKnownField(profile.irrigationSource) ? profile.irrigationSource.value : undefined,
+    };
+  }, [profile]);
+
+  const {
     data,
     meta,
     loading,
@@ -31,11 +65,12 @@ export function DashboardView() {
     setIsMock,
     refetch,
     coordinates,
-  } = useClimateData(false);
+  } = useClimateData(false, customCoordinates);
 
   const { data: rotationsData, loading: rotationsLoading } = useCropRotations(
     coordinates,
-    isMock
+    isMock,
+    farmerContext
   );
 
   const [activeSection, setActiveSection] = useState("overview");
@@ -76,10 +111,73 @@ export function DashboardView() {
               : "2015 – 2024"
           }
           locationName={
-            data?.location.name || "Ludhiana Demonstration Region, Punjab"
+            profile && isKnownField(profile.location) && profile.location.value.district
+              ? `${profile.location.value.district}, Punjab, India`
+              : data?.location.name || "Ludhiana Demonstration Region, Punjab"
           }
           coordsText={`${coordinates.lat.toFixed(2)}° N, ${coordinates.lon.toFixed(2)}° E`}
         />
+
+        {/* Farmer Profile Lifecycle & Sync Banner */}
+        {profile && (
+          <div
+            className={`p-3.5 sm:p-4 rounded-xl border text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 transition-all shadow-xs ${
+              syncStatus === "recreated"
+                ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
+                : syncStatus === "synced"
+                ? "bg-white border-slate-200 text-slate-800"
+                : syncStatus === "offline"
+                ? "bg-amber-50 border-amber-200 text-amber-950"
+                : "bg-rose-50 border-rose-200 text-rose-950"
+            }`}
+          >
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${
+                  syncStatus === "synced" || syncStatus === "recreated"
+                    ? "bg-emerald-600"
+                    : syncStatus === "offline"
+                    ? "bg-amber-500"
+                    : "bg-rose-500"
+                }`}
+              />
+              <span className="font-semibold">
+                {syncStatus === "recreated"
+                  ? "Profile Restored on Backend"
+                  : syncStatus === "synced"
+                  ? "Farmer Profile Synchronized"
+                  : syncStatus === "offline"
+                  ? "Local Profile (Offline Cache)"
+                  : "Profile Sync Error"}
+              </span>
+              {profileId && (
+                <span className="font-mono text-[11px] opacity-70">
+                  ID: {profileId.slice(0, 8)}...
+                </span>
+              )}
+              {isKnownField(profile.soilTexture) && (
+                <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[10px] text-slate-700 capitalize">
+                  Soil: {profile.soilTexture.value.replace("_", " ")}
+                </span>
+              )}
+              {isKnownField(profile.irrigationSource) && (
+                <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[10px] text-slate-700 capitalize">
+                  Irrigation: {profile.irrigationSource.value.replace("_", " ")}
+                </span>
+              )}
+            </div>
+            {recoveryOccurred && (
+              <span className="text-[11px] text-emerald-700 font-medium">
+                Automatic recovery after server restart succeeded.
+              </span>
+            )}
+            {!isSynchronized && profileError && (
+              <span className="text-[11px] text-rose-700 font-medium">
+                {profileError.message}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Loading State */}
         {loading && <DashboardLoading />}

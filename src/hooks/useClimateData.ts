@@ -22,7 +22,10 @@ export interface UseClimateDataResult {
   coordinates: { lat: number; lon: number };
 }
 
-export function useClimateData(initialMock = false): UseClimateDataResult {
+export function useClimateData(
+  initialMock = false,
+  customCoordinates?: { lat: number; lon: number }
+): UseClimateDataResult {
   const [isMock, setIsMock] = useState(initialMock);
   const [data, setData] = useState<ClimateIndicators | null>(null);
   const [meta, setMeta] = useState<{
@@ -33,7 +36,7 @@ export function useClimateData(initialMock = false): UseClimateDataResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
 
-  const coordinates = { lat: 30.9, lon: 75.85 };
+  const coordinates = customCoordinates ?? { lat: 30.9, lon: 75.85 };
 
   const loadData = useCallback(async () => {
     setLoading(true);
